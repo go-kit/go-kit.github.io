@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Go kit - Frequently asked questions</title>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<meta name="description" content="Go kit - Frequently asked questions" />
+<meta name="author" content="Peter Bourgon" />
+<meta name="keywords" content="go kit go-kit gokit golang microservice microservices toolkit framework metallica" />
+<link href="/css/global.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="c">
+<div class="hero">
+<div class="logo">
+<a href="/"><img src="/gokit-logo-header.png" width=100 height=100 alt="Go kit logo" /></a>
+</div>
+
+<div class="title">
+<h1>Go kit</h1>
+<h2>Frequently asked questions</h2>
+</div>
+</div>
+
+<hr/>
+<div class="header">
+<p>
+	<a href="/">Home</a> &nbsp;&nbsp;
+	<a href="/examples">Examples</a> &nbsp;&nbsp;
+	<a href="/faq">FAQ</a> &nbsp;&nbsp;
+	<a href="/blog">Blog</a> &nbsp;&nbsp;·&nbsp;&nbsp;
+	<a href="https://godoc.org/github.com/go-kit/kit">Godoc reference</a> &nbsp;&nbsp;
+	<a href="https://github.com/go-kit/kit">GitHub</a> &nbsp;&nbsp;
+	<a href="https://gophers.slack.com/messages/go-kit/">Slack</a> &nbsp;&nbsp;
+	<a href="https://groups.google.com/forum/#!forum/go-kit">Mailing list</a>
+</p>
+</div>
+
+<hr/>
+
+<div class="content">
+<nav>
+<ul>
+<li><a href="#general">General</a>
+<ul>
+<li><a href="#what-is-go-kit">What is Go kit?</a></li>
+<li><a href="#why-should-i-use-go-kit">Why should I use Go kit?</a></li>
+<li><a href="#who-is-behind-go-kit">Who is behind Go kit?</a></li>
+<li><a href="#is-go-kit-production-ready">Is Go kit production-ready?</a></li>
+<li><a href="#which-organizations-are-using-go-kit">Which organizations are using Go kit?</a></li>
+</ul></li>
+<li><a href="#architecture-and-design">Architecture and design</a>
+<ul>
+<li><a href="#what-is-the-design-of-a-go-kit-microservice">What is the design of a Go kit microservice?</a></li>
+<li><a href="#why-is-func-main-always-so-big">Why is func main always so big?</a></li>
+<li><a href="#how-should-i-deploy-go-kit-services">How should I deploy Go kit services?</a></li>
+<li><a href="#how-should-i-encode-errors">How should I encode errors?</a></li>
+</ul></li>
+<li><a href="#specific-components">Specific components</a>
+<ul>
+<li><a href="#which-transports-are-supported">Which transports are supported?</a></li>
+<li><a href="#which-service-discovery-systems-are-supported">Which service discovery systems are supported?</a></li>
+<li><a href="#do-i-even-need-to-use-package-sd">Do I even need to use package sd?</a></li>
+<li><a href="#which-monitoring-systems-are-supported">Which monitoring systems are supported?</a></li>
+<li><a href="#which-monitoring-system-should-i-use">Which monitoring system should I use?</a></li>
+<li><a href="#why-is-package-log-so-different">Why is package log so different?</a></li>
+<li><a href="#how-should-i-aggregate-my-logs">How should I aggregate my logs?</a></li>
+</ul></li>
+</ul>
+</nav>
+
+<h1 id="general">General</h1>
+
+<h2 id="what-is-go-kit">What is Go kit?</h2>
+
+<p>Go kit is a collection of Go (golang) packages (libraries) that help you build robust, reliable, maintainable microservices.
+It was originally conceived as a toolkit to help larger (so-called <em>modern enterprise</em>) organizations adopt Go as an implementation language.
+But it very quickly &ldquo;grew downward&rdquo;, and now serves smaller startups and organizations just as well.
+For more about the origins of Go kit, see <a href="http://peter.bourgon.org/go-kit/">Go kit: Go in the modern enterprise</a>.</p>
+
+<h2 id="why-should-i-use-go-kit">Why should I use Go kit?</h2>
+
+<p>You should use Go kit if you know you want to adopt the microservices pattern in your organization.
+Go kit will help you structure and build out your services,
+ avoid common pitfalls, and write code that grows with grace.</p>
+
+<p>Go kit can also help to justify Go as an implementation language
+ to stakeholders like engineering managers or tech leads.
+Go kit de-risks both Go and microservices
+ by providing mature patterns and idioms,
+ written and maintained by a large group of experienced contributors,
+ and validated in production environments.</p>
+
+<h2 id="who-is-behind-go-kit">Who is behind Go kit?</h2>
+
+<p>Go kit was originally conceived by <a href="https://peter.bourgon.org/about">Peter Bourgon</a>,
+ but is now built and maintained by a <a href="https://github.com/go-kit/kit/contributors">large group of contributors</a>
+ from a diverse set of backgrounds and organizations.
+Go kit is presently an all-volunteer effort, and has no commercial backing.</p>
+
+<h2 id="is-go-kit-production-ready">Is Go kit production-ready?</h2>
+
+<p><strong>Yes</strong>. Go kit is being used in production in several organizations, large and small.</p>
+
+<h2 id="which-organizations-are-using-go-kit">Which organizations are using Go kit?</h2>
+
+<p>Watch this space :)</p>
+
+<h1 id="architecture-and-design">Architecture and design</h1>
+
+<h2 id="what-is-the-design-of-a-go-kit-microservice">What is the design of a Go kit microservice?</h2>
+
+<p><img src="onion.png" height=355 width=355 alt="Go kit service diagram" style="float:right;" /></p>
+
+<p>Go kit models a microservice like an onion, with many layers.
+The layers can be divided into three domains.</p>
+
+<p>The innermost <strong>service</strong> domain is where everything is based on your specific service definition,
+ and where all of the business logic is implemented.
+The middle <strong>endpoint</strong> domain is where each method of your service is abstracted to the generic
+ <a href="https://godoc.org/github.com/go-kit/kit/endpoint#Endpoint">endpoint.Endpoint</a>,
+ and where safety and antifragile logic is implemented.
+Finally, the outermost <strong>transport</strong> domain is where endpoints are bound
+ to concrete transports like HTTP or gRPC.</p>
+
+<p>You implement the core business logic
+ by defining an interface for your service
+ and providing a concrete implementation.
+Then, you write service middlewares to provide additional functionality,
+ like logging, analytics, instrumentation —
+ anything that needs knowledge of your business domain.</p>
+
+<p>Go kit provides endpoint and transport domain middlewares,
+ for functionality like rate limiting, circuit breaking, load balancing,
+ and distributed tracing —
+ all of which are generally agnostic to your business domain.</p>
+
+<p>In short, Go kit tries to enforce strict <strong>separation of concerns</strong>
+ through studious use of the <strong>middleware</strong> (or decorator) pattern.</p>
+
+<h2 id="why-is-func-main-always-so-big">Why is func main always so big?</h2>
+
+<p>Go kit encourages you to design your services as multiple interacting components,
+ including several single-purpose middlewares.
+Experience has taught me that the most comprehensible, maintainable, and expressive method
+ of defining and wiring up the component graph in a microservice
+ is through an explicit and declarative composition in a large func main.</p>
+
+<p>This style reinforces two important virtues.
+By strictly keeping component lifecycles in main,
+ you avoid leaning on global state as a shortcut,
+ which is critical for testability.
+And if components are scoped to main,
+ the only way to provide them as dependencies to other components
+ is to pass them explicitly as parameters to constructors.
+This keeps dependencies explicit, which stops a lot of technical debt before it starts.</p>
+
+<p>For more general Go design tips, see
+ <a href="https://peter.bourgon.org/go-best-practices-2016/">Go best practices, six years in</a>.</p>
+
+<h2 id="how-should-i-deploy-go-kit-services">How should I deploy Go kit services?</h2>
+
+<p>It&rsquo;s totally up to you.
+You can build a static binary, scp it to your server,
+ and use a supervisor like <a href="http://smarden.org/runit/">runit</a>.
+Or you can use a tool like <a href="https://www.packer.io/">Packer</a> to create an AMI,
+ and deploy it into an EC2 <a href="http://docs.aws.amazon.com/autoscaling/latest/userguide/AutoScalingGroup.html">autoscaling group</a>.
+Or you can package your service up into a container, ship it to a registry,
+ and deploy it onto a cloud-native platform like <a href="http://kubernetes.io">Kubernetes</a>.</p>
+
+<p>Go kit is mostly concerned with good software engineering within your service;
+ it tries to integrate well with any kind of platform or infrastructure.</p>
+
+<h2 id="how-should-i-encode-errors">How should I encode errors?</h2>
+
+<p>Your service methods will probably return errors.
+You have two options for encoding them in your endpoints.
+You can include an error field in your response struct, and return your business domain errors there.
+Or, you can choose to return your business domain errors in the endpoint error return value.</p>
+
+<p>Both methods can be made to work.
+But errors returned directly by endpoints are recognized by middlewares that check for failures,
+ like circuit breakers.
+It&rsquo;s unlikely that a business-domain error from your service
+ should cause a circuit breaker to trip in a client.
+So, it&rsquo;s likely that you want to encode errors in your response struct.</p>
+
+<p><a href="http://github.com/go-kit/kit/tree/master/examples/addsvc">addsvc</a>
+ contains examples of both methods.</p>
+
+<h1 id="specific-components">Specific components</h1>
+
+<h2 id="which-transports-are-supported">Which transports are supported?</h2>
+
+<p>Go kit ships with support for HTTP,
+ <a href="https://grpc.io">gRPC</a>,
+ <a href="https://thrift.apache.org">Thrift</a>, and
+ <a href="https://golang.org/pkg/net/rpc/">net/rpc</a>.
+It&rsquo;s straightforward to add support for new transports;
+ just <a href="https://github.com/go-kit/kit/issues/new">file an issue</a>
+ if you need something that isn&rsquo;t already offered.</p>
+
+<h2 id="which-service-discovery-systems-are-supported">Which service discovery systems are supported?</h2>
+
+<p>Go kit ships with support for
+ <a href="https://consul.io">Consul</a>,
+ <a href="https://coreos.com/etcd/">etcd</a>,
+ <a href="https://zookeeper.apache.org/">ZooKeeper</a>,
+ and DNS SRV records.</p>
+
+<h2 id="do-i-even-need-to-use-package-sd">Do I even need to use package sd?</h2>
+
+<p>It depends on your infrastructure.</p>
+
+<p>Some platforms, like Kubernetes, take care of registering services instances
+ and making them discoverable automatically, via
+ <a href="http://kubernetes.io/docs/user-guide/services">platform-specific concepts</a>.
+So, if you run on Kubernetes, you probably don&rsquo;t need to use package sd.</p>
+
+<p>But if you&rsquo;re putting together your own infrastructure or platform with open-source components,
+ then your services will likely need to register themselves with the service registry,
+ or query the registry to find their dependencies.
+In this situation, package sd will be useful.</p>
+
+<h2 id="which-monitoring-systems-are-supported">Which monitoring systems are supported?</h2>
+
+<p>Go kit ships with support for modern monitoring systems like
+ <a href="https://prometheus.io">Prometheus</a> and <a href="https://influxdata.com/">InfluxDB</a>,
+ as well as more traditional systems like
+ <a href="https://github.com/etsy/statsd">statsd</a>,
+ <a href="http://graphite.wikidot.com/">Graphite</a>, and
+ <a href="https://golang.org/pkg/expvar">expvar</a>,
+ and hosted systems like
+ Datadog via <a href="http://docs.datadoghq.com/guides/dogstatsd/">DogStatsD</a>
+ and <a href="http://www.circonus.com/">Circonus</a>.</p>
+
+<h2 id="which-monitoring-system-should-i-use">Which monitoring system should I use?</h2>
+
+<p><a href="https://prometheus.io">Prometheus</a>.</p>
+
+<h2 id="why-is-package-log-so-different">Why is package log so different?</h2>
+
+<p>Experience has taught us that a good logging package should be based on a minimal interface
+ and should enforce so-called structured logging.
+Based on these invariants, Go kit&rsquo;s package log has evolved through
+ many design iterations, extensive benchmarking, and plenty of real-world use
+ to arrive at its current state.</p>
+
+<p>With a well-defined core contract,
+ ancillary concerns like levels, colorized output, and synchronization
+ can be easily bolted on using the familiar decorator pattern.
+It may feel a little unfamiliar at first,
+ but we believe package log strikes the ideal balance between
+ usability, maintainability, and performance.</p>
+
+<p>For more details on the evolution of package log, see issues and PRs
+ <a href="#">#ABC</a>,
+ <a href="#">#123</a>,
+ <a href="#">#XYZ</a>, and
+ <a href="#">#F0F</a>.
+For more on logging philosophy, see
+ <a href="#">Toward a logging interface</a>,
+ <a href="http://dave.cheney.net/2015/11/05/lets-talk-about-logging">Let&rsquo;s talk about logging</a>, and
+ <a href="https://peter.bourgon.org/blog/2016/02/07/logging-v-instrumentation.html">Logging v. instrumentation</a>.</p>
+
+<h2 id="how-should-i-aggregate-my-logs">How should I aggregate my logs?</h2>
+
+<p>Collecting, shipping, and aggregating logs is the responsibility of the platform, not individual services.
+So, just make sure you&rsquo;re writing logs to stdout/stderr, and let another component handle the rest.</p>
+</div>
+
+<br/>
+<hr/>
+<div class="footer">
+<p>
+Copyright &copy; 2014&ndash;2016 <a href="https://peter.bourgon.org">Peter Bourgon</a>
+ and <a href="https://github.com/go-kit/kit/contributors">the Go kit contributors</a>. <br/>
+The Go Gopher was designed by <a href="http://reneefrench.blogspot.com">Renée French</a>
+ and is licensed under the Creative Commons 3.0 Attributions license.
+</p>
+</div>
+</div>
+
+</body>
+</html>
