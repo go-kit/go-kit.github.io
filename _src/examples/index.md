@@ -29,5 +29,5 @@ Here you can find some examples that will orient you to Go kit idioms,
   based on Domain Driven Design principles.
 
 - **[apigateway](https://github.com/go-kit/kit/blob/master/examples/apigateway)**
-  demonstrates how to implement the [API gateway pattern](http://microservices.io/patterns/api-gateway.html)
+  demonstrates how to implement the [API gateway pattern](http://microservices.io/patterns/apigateway.html)
   backed by a Consul service discovery system.
