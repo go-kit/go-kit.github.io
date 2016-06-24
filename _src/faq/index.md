@@ -41,6 +41,14 @@ Go kit is presently an all-volunteer effort, and has no commercial backing.
 
 Watch this space :)
 
+## How does Go kit compare to Micro?
+
+Like Go kit, [Micro](https://micro.mu) describes itself as [a microservice toolkit](https://github.com/micro/micro/wiki/Architecture).
+But unlike Go kit, Micro also describes itself as [a microservice ecosystem](https://micro.mu/).
+It takes a broader view, encoding expectations and opinions about the infrastructure and architecture.
+In short, I think Micro wants to _be_ a platform;
+ Go kit, in contrast, wants to integrate into your platform.
+
 # Architecture and design
 
 ## What is the design of a Go kit microservice?
