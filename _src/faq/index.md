@@ -200,11 +200,11 @@ It may feel a little unfamiliar at first,
  usability, maintainability, and performance.
 
 For more details on the evolution of package log, see issues and PRs
- [#63](https://github.com/go-kit/kit/issues/63),
- [#76](https://github.com/go-kit/kit/pull/76),
- [#131](https://github.com/go-kit/kit/issues/131),
- [#157](https://github.com/go-kit/kit/pull/157), and
- [#252](https://github.com/go-kit/kit/pull/252).
+ [63](https://github.com/go-kit/kit/issues/63),
+ [76](https://github.com/go-kit/kit/pull/76),
+ [131](https://github.com/go-kit/kit/issues/131),
+ [157](https://github.com/go-kit/kit/pull/157), and
+ [252](https://github.com/go-kit/kit/pull/252).
 For more on logging philosophy, see
  [The Hunt for a Logger Interface](http://go-talks.appspot.com/github.com/ChrisHines/talks/structured-logging/structured-logging.slide),
  [Let's talk about logging](http://dave.cheney.net/2015/11/05/lets-talk-about-logging), and
