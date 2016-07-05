@@ -161,9 +161,12 @@ Some platforms, like Kubernetes, take care of registering services instances
 So, if you run on Kubernetes, you probably don't need to use package sd.
 
 But if you're putting together your own infrastructure or platform with open-source components,
- then your services will likely need to register themselves with the service registry,
- or query the registry to find their dependencies.
-In this situation, package sd will be useful.
+ then your services will likely need to register themselves with the service registry.
+Or if you have reached a scale where internal load balancers become a bottleneck,
+ you may need to have your services subscribe to the system of record directly,
+ and maintain their own connection pools.
+(This is the [client-side discovery](http://microservices.io/patterns/client-side-discovery.html) pattern.)
+In these situations, package sd will be useful.
 
 ## Which monitoring systems are supported?
 

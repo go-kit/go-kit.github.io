@@ -226,9 +226,12 @@ It&rsquo;s straightforward to add support for new transports;
 So, if you run on Kubernetes, you probably don&rsquo;t need to use package sd.</p>
 
 <p>But if you&rsquo;re putting together your own infrastructure or platform with open-source components,
- then your services will likely need to register themselves with the service registry,
- or query the registry to find their dependencies.
-In this situation, package sd will be useful.</p>
+ then your services will likely need to register themselves with the service registry.
+Or if you have reached a scale where internal load balancers become a bottleneck,
+ you may need to have your services subscribe to the system of record directly,
+ and maintain their own connection pools.
+(This is the <a href="http://microservices.io/patterns/client-side-discovery.html">client-side discovery</a> pattern.)
+In these situations, package sd will be useful.</p>
 
 <h2 id="which-monitoring-systems-are-supported">Which monitoring systems are supported?</h2>
 
