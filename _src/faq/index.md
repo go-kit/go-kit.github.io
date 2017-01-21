@@ -136,7 +136,7 @@ So, it's likely that you want to encode errors in your response struct.
 ## Which transports are supported?
 
 Go kit ships with support for HTTP,
- [gRPC](https://grpc.io),
+ [gRPC](http://www.grpc.io),
  [Thrift](https://thrift.apache.org), and
  [net/rpc](https://golang.org/pkg/net/rpc/).
 It's straightforward to add support for new transports;
