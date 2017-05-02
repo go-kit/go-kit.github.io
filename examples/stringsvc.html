@@ -188,18 +188,15 @@ Go kit provides a helper struct, in package transport/http.</p>
 )
 
 func main() {
-	ctx := context.Background()
 	svc := stringService{}
 
 	uppercaseHandler := httptransport.NewServer(
-		ctx,
 		makeUppercaseEndpoint(svc),
 		decodeUppercaseRequest,
 		encodeResponse,
 	)
 
 	countHandler := httptransport.NewServer(
-		ctx,
 		makeCountEndpoint(svc),
 		decodeCountRequest,
 		encodeResponse,
