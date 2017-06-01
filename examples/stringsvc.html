@@ -143,7 +143,7 @@ We&rsquo;ll write simple adapters to convert each of our service&rsquo;s methods
 Each adapter takes a StringService, and returns an endpoint that corresponds to one of the methods.</p>
 
 <pre><code class="language-go">import (
-	&quot;golang.org/x/net/context&quot;
+	&quot;context&quot;
 	&quot;github.com/go-kit/kit/endpoint&quot;
 )
 
@@ -182,7 +182,7 @@ Go kit provides a helper struct, in package transport/http.</p>
 	&quot;log&quot;
 	&quot;net/http&quot;
 
-	&quot;golang.org/x/net/context&quot;
+	&quot;context&quot;
 
 	httptransport &quot;github.com/go-kit/kit/transport/http&quot;
 )
