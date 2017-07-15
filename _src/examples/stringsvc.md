@@ -82,7 +82,7 @@ Each adapter takes a StringService, and returns an endpoint that corresponds to 
 
 ```go
 import (
-	"golang.org/x/net/context"
+	"context"
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -118,11 +118,10 @@ Go kit provides a helper struct, in package transport/http.
 
 ```go
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"golang.org/x/net/context"
 
 	httptransport "github.com/go-kit/kit/transport/http"
 )
