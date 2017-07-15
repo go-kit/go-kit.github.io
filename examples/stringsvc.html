@@ -280,11 +280,11 @@ svc := stringService{}
 
 var uppercase endpoint.Endpoint
 uppercase = makeUppercaseEndpoint(svc)
-uppercase = loggingMiddleware(log.NewContext(logger).With(&quot;method&quot;, &quot;uppercase&quot;))(uppercase)
+uppercase = loggingMiddleware(log.With(logger, &quot;method&quot;, &quot;uppercase&quot;))(uppercase)
 
 var count endpoint.Endpoint
 count = makeCountEndpoint(svc)
-count = loggingMiddleware(log.NewContext(logger).With(&quot;method&quot;, &quot;count&quot;))(count)
+count = loggingMiddleware(log.With(logger, &quot;method&quot;, &quot;count&quot;))(count)
 
 uppercaseHandler := httptransport.Server(
 	// ...
