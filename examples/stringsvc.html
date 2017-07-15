@@ -80,24 +80,32 @@
 In Go kit, we model a service as an <strong>interface</strong>.</p>
 
 <pre><code class="language-go">// StringService provides operations on strings.
+import &quot;context&quot;
+
 type StringService interface {
-	Uppercase(string) (string, error)
-	Count(string) int
+	Uppercase(context.Context, string) (string, error)
+	Count(context.Context, string) int
 }
 </code></pre>
 
 <p>That interface will have an implementation.</p>
 
-<pre><code class="language-go">type stringService struct{}
+<pre><code class="language-go">import (
+	&quot;context&quot;
+	&quot;errors&quot;
+	&quot;strings&quot;
+)
 
-func (stringService) Uppercase(s string) (string, error) {
+type stringService struct{}
+
+func (stringService) Uppercase(_ context.Context, s string) (string, error) {
 	if s == &quot;&quot; {
 		return &quot;&quot;, ErrEmpty
 	}
 	return strings.ToUpper(s), nil
 }
 
-func (stringService) Count(s string) int {
+func (stringService) Count(_ context.Context, s string) int {
 	return len(s)
 }
 
@@ -150,7 +158,7 @@ Each adapter takes a StringService, and returns an endpoint that corresponds to 
 func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(uppercaseRequest)
-		v, err := svc.Uppercase(req.S)
+		v, err := svc.Uppercase(ctx, req.S)
 		if err != nil {
 			return uppercaseResponse{v, err.Error()}, nil
 		}
@@ -161,7 +169,7 @@ func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
 func makeCountEndpoint(svc StringService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(countRequest)
-		v := svc.Count(req.S)
+		v := svc.Count(ctx, req.S)
 		return countResponse{v}, nil
 	}
 }
@@ -314,7 +322,7 @@ Since our StringService is defined as an interface, we just need to make a new t
 	next   StringService
 }
 
-func (mw loggingMiddleware) Uppercase(s string) (output string, err error) {
+func (mw loggingMiddleware) Uppercase(ctx context.Context, s string) (output string, err error) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			&quot;method&quot;, &quot;uppercase&quot;,
@@ -325,11 +333,11 @@ func (mw loggingMiddleware) Uppercase(s string) (output string, err error) {
 		)
 	}(time.Now())
 
-	output, err = mw.next.Uppercase(s)
+	output, err = mw.next.Uppercase(ctx, s)
 	return
 }
 
-func (mw loggingMiddleware) Count(s string) (n int) {
+func (mw loggingMiddleware) Count(ctx context.Context, s string) (n int) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			&quot;method&quot;, &quot;count&quot;,
@@ -339,7 +347,7 @@ func (mw loggingMiddleware) Count(s string) (n int) {
 		)
 	}(time.Now())
 
-	n = mw.next.Count(s)
+	n = mw.next.Count(ctx, s)
 	return
 }
 </code></pre>
@@ -396,7 +404,7 @@ Counting the number of jobs processed,
 	next           StringService
 }
 
-func (mw instrumentingMiddleware) Uppercase(s string) (output string, err error) {
+func (mw instrumentingMiddleware) Uppercase(ctx context.Context, s string) (output string, err error) {
 	defer func(begin time.Time) {
 		methodField := metrics.Field{Key: &quot;method&quot;, Value: &quot;uppercase&quot;}
 		errorField := metrics.Field{Key: &quot;error&quot;, Value: fmt.Sprintf(&quot;%v&quot;, err)}
@@ -404,11 +412,11 @@ func (mw instrumentingMiddleware) Uppercase(s string) (output string, err error)
 		mw.requestLatency.With(methodField).With(errorField).Observe(time.Since(begin))
 	}(time.Now())
 
-	output, err = mw.next.Uppercase(s)
+	output, err = mw.next.Uppercase(ctx, s)
 	return
 }
 
-func (mw instrumentingMiddleware) Count(s string) (n int) {
+func (mw instrumentingMiddleware) Count(ctx context.Context, s string) (n int) {
 	defer func(begin time.Time) {
 		methodField := metrics.Field{Key: &quot;method&quot;, Value: &quot;count&quot;}
 		errorField := metrics.Field{Key: &quot;error&quot;, Value: fmt.Sprintf(&quot;%v&quot;, error(nil))}
@@ -417,7 +425,7 @@ func (mw instrumentingMiddleware) Count(s string) (n int) {
 		mw.countResult.Observe(int64(n))
 	}(time.Now())
 
-	n = mw.next.Count(s)
+	n = mw.next.Count(ctx, s)
 	return
 }
 </code></pre>
@@ -490,7 +498,6 @@ Let&rsquo;s implement the proxying middleware as a ServiceMiddleware, same as a 
 // provided endpoint, and serving all other (i.e. Count) requests via the
 // next StringService.
 type proxymw struct {
-	ctx       context.Context
 	next      StringService     // Serve most requests via this service...
 	uppercase endpoint.Endpoint // ...except Uppercase, which gets served by this endpoint
 }
@@ -502,8 +509,8 @@ type proxymw struct {
 When used this way, we call it a <em>client</em> endpoint.
 And to invoke the client endpoint, we just do some simple conversions.</p>
 
-<pre><code class="language-go">func (mw proxymw) Uppercase(s string) (string, error) {
-	response, err := mw.uppercase(mw.Context, uppercaseRequest{S: s})
+<pre><code class="language-go">func (mw proxymw) Uppercase(ctx context.Context, s string) (string, error) {
+	response, err := mw.uppercase(ctx, uppercaseRequest{S: s})
 	if err != nil {
 		return &quot;&quot;, err
 	}
@@ -522,13 +529,13 @@ If we assume JSON over HTTP, we can use a helper in the transport/http package.<
 	httptransport &quot;github.com/go-kit/kit/transport/http&quot;
 )
 
-func proxyingMiddleware(proxyURL string, ctx context.Context) ServiceMiddleware {
+func proxyingMiddleware(proxyURL string) ServiceMiddleware {
 	return func(next StringService) StringService {
-		return proxymw{ctx, next, makeUppercaseEndpoint(ctx, proxyURL)}
+		return proxymw{next, makeUppercaseEndpoint(proxyURL)}
 	}
 }
 
-func makeUppercaseEndpoint(ctx context.Context, proxyURL string) endpoint.Endpoint {
+func makeUppercaseEndpoint(proxyURL string) endpoint.Endpoint {
 	return httptransport.NewClient(
 		&quot;GET&quot;,
 		mustParseURL(proxyURL),
@@ -562,7 +569,7 @@ Those adapters are called subscribers.</p>
 But it&rsquo;s important to put some safety middleware, like circuit breakers and rate limiters, into your factory, too.</p>
 
 <pre><code class="language-go">var e endpoint.Endpoint
-e = makeUppercaseProxy(ctx, instance)
+e = makeUppercaseProxy(instance)
 e = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(e)
 e = kitratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(float64(maxQPS), int64(maxQPS)))(e)
 }
@@ -588,7 +595,7 @@ The retry strategy will retry failed requests until either the max attempts or t
 <p>Let&rsquo;s wire up our final proxying middleware.
 For simplicity, we&rsquo;ll assume the user will specify multiple comma-separate instance endpoints with a flag.</p>
 
-<pre><code class="language-go">func proxyingMiddleware(instances string, ctx context.Context, logger log.Logger) ServiceMiddleware {
+<pre><code class="language-go">func proxyingMiddleware(instances string, logger log.Logger) ServiceMiddleware {
 	// If instances is empty, don't proxy.
 	if instances == &quot;&quot; {
 		logger.Log(&quot;proxy_to&quot;, &quot;none&quot;)
@@ -613,7 +620,7 @@ For simplicity, we&rsquo;ll assume the user will specify multiple comma-separate
 	logger.Log(&quot;proxy_to&quot;, fmt.Sprint(instanceList))
 	for _, instance := range instanceList {
 		var e endpoint.Endpoint
-		e = makeUppercaseProxy(ctx, instance)
+		e = makeUppercaseProxy(instance)
 		e = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(e)
 		e = kitratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(float64(qps), int64(qps)))(e)
 		subscriber = append(subscriber, e)
@@ -626,7 +633,7 @@ For simplicity, we&rsquo;ll assume the user will specify multiple comma-separate
 
 	// And finally, return the ServiceMiddleware, implemented by proxymw.
 	return func(next StringService) StringService {
-		return proxymw{ctx, next, retry}
+		return proxymw{next, retry}
 	}
 }
 </code></pre>
