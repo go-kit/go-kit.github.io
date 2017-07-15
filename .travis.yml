@@ -1,0 +1,18 @@
+language: go
+dist: trusty
+sudo: false
+
+install:
+  - go get github.com/peterbourgon/grender
+script:
+  - make
+
+deploy:
+  - provider: pages
+    skip_cleanup: true
+    github_token: $GITHUB_TOKEN
+    local_dir: output
+    fqdn: 'gokit.io'
+    target_branch: master
+    on:
+      branch: source

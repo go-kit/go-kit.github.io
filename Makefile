@@ -1,4 +1,4 @@
 .PHONY: all
 all:
-	grender -source _src -target .
+	grender -source _src -target output
 
