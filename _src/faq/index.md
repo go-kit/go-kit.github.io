@@ -66,7 +66,9 @@ Requests enter the service at layer 1, flow down to layer 3, and responses take 
 
 This may be a bit of an adjustment, but once you grok the concepts,
  you should see that the Go kit design is well-suited for modern software design:
- both microservices and so-called "elegant monoliths".
+ both microservices and so-called 
+ [elegant](https://martinfowler.com/bliki/MonolithFirst.html)
+ [monoliths](https://inconshreveable.com/10-07-2015/the-neomonolith/).
 
 ## Transports &mdash; What are Go kit transports?
 
