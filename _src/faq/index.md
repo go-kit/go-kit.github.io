@@ -269,3 +269,25 @@ For more on logging philosophy, see
 
 Collecting, shipping, and aggregating logs is the responsibility of the platform, not individual services.
 So, just make sure you're writing logs to stdout/stderr, and let another component handle the rest.
+
+## Panics &mdash; How should my service handle panics?
+
+Panics indicate programmer error and signal corrputed program state.
+They shouldn't be treated as errors, or ersatz exceptions.
+In general, you shouldn't explicitly recover from panics:
+ you should allow them to crash your program or handler goroutine,
+ and allow your service to return a broken response to the calling client.
+Your observability stack should alert you to these problems as they occur,
+ and you should fix them as soon as possible.
+
+With that said, if you have the need to handle exceptions, the best strategy
+ is probably to wrap the concrete transport with a transport-specific middleware
+ that performs a recover.
+For example, with HTTP:
+
+```go
+var h http.Handler
+h = httptransport.NewServer(...)
+h = newRecoveringMiddleware(h, ...)
+// use h normally
+```
