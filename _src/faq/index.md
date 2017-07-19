@@ -107,14 +107,9 @@ That is, the business logic should have no knowledge of endpoint- or especially 
 ## Middlewares &mdash; What are middlewares, in Go kit?
 
 Go kit tries to enforce a strict separation of concerns through use of the middleware (or decorator) pattern.
-Middlewares can wrap endpoints or services to add functionality such as:
-
-- Logging
-- Rate limiting
-- Load balancing
-- Distributed tracing
-
-You can even chain multiple middlewares to an endpoint or service.
+Middlewares can wrap endpoints or services to add functionality, such as
+ logging, rate limiting, load balancing, or distributed tracing.
+It's common to chain multiple middlewares around an endpoint or service.
 
 ## Design &mdash; How is a Go kit microservice modeled?
 
