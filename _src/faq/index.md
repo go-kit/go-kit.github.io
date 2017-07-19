@@ -51,13 +51,77 @@ In short, I think Micro wants to _be_ a platform;
 
 # Architecture and design
 
-## What is the design of a Go kit microservice?
+## Introduction &mdash; Understanding Go kit key concepts
+
+If you're coming from Symfony (PHP), Rails (Ruby), Django (Python), 
+ or one of the many popular MVC-style frameworks out there,
+ the first thing you should know is that Go kit is not an MVC framework.
+Instead, Go kit services are laid out in three layers:
+
+1. Transport layer
+2. Endpoint layer
+3. Service layer
+
+Requests enter the service at layer 1, flow down to layer 3, and responses take the reverse course.
+
+This may be a bit of an adjustment, but once you grok the concepts,
+ you should see that the Go kit design is well-suited for modern software design:
+ both microservices and so-called "elegant monoliths".
+
+## Transports &mdash; What are Go kit transports?
+
+The transport domain is bound to concrete transports like HTTP or gRPC.
+In a world where microservices may support one or more transports,
+ this is very powerful; you can support a legacy HTTP API and a newer RPC service,
+all in a single microservice.
+
+When implementing a REST-ish HTTP API, your routing is defined within a HTTP transport.
+It's most common to see routes defined in a HTTP Router function like this:
+
+```go
+r.Methods("POST").Path("/profiles/").Handler(httptransport.NewServer(
+		e.PostProfileEndpoint,
+		decodePostProfileRequest,
+		encodeResponse,
+		options...,
+))
+```
+
+### Endpoints &mdash; What are Go kit endpoints?
+
+An endpoint is like an action/handler on a controller; it's where safety and antifragile logic lives.
+If you implement two transports (HTTP and gRPC), you might have two methods of sending requests to the same endpoint.
+
+### Services &mdash; What is a Go kit service?
+
+Services are where all of the business logic is implemented.
+A service usually glues together multiple endpoints.
+In Go kit, services are typically modeled as interfaces,
+ and implementations of those interfaces contain the business logic.
+Go kit services should strive to abide
+ [the Clean Architecture](https://8thlight.com/blog/uncle-bob/2012/08/13/the-clean-architecture.html) or
+ [the Hexagonal Architecture](http://alistair.cockburn.us/Hexagonal+architecture).
+That is, the business logic should have no knowledge of endpoint- or especially transport-domain concepts:
+ your service shouldn't know anything about HTTP headers, or gRPC error codes.
+
+### Middlewares &mdash; What are middlewares, in Go kit?
+
+Go kit tries to enforce a strict separation of concerns through use of the middleware (or decorator) pattern.
+Middlewares can wrap endpoints or services to add functionality such as:
+
+- Logging
+- Rate limiting
+- Load balancing
+- Distributed tracing
+
+You can even chain multiple middlewares to an endpoint or service.
+
+## Design &mdash; How is a Go kit microservice modeled?
 
 <img src="onion.png" height=355 width=355 alt="Go kit service diagram" style="float:right;" />
 
-Go kit models a microservice like an onion, with many layers.
-The layers can be divided into three domains.
-
+Putting all these concepts together, we see that Go kit microservices are modeled like an onion, with many layers.
+The layers can be grouped into our three domains.
 The innermost **service** domain is where everything is based on your specific service definition,
  and where all of the business logic is implemented.
 The middle **endpoint** domain is where each method of your service is abstracted to the generic
@@ -66,22 +130,18 @@ The middle **endpoint** domain is where each method of your service is abstracte
 Finally, the outermost **transport** domain is where endpoints are bound
  to concrete transports like HTTP or gRPC.
 
-You implement the core business logic
- by defining an interface for your service
- and providing a concrete implementation.
+You implement the core business logic by defining an interface for your service and providing a concrete implementation.
 Then, you write service middlewares to provide additional functionality,
- like logging, analytics, instrumentation —
- anything that needs knowledge of your business domain.
+ like logging, analytics, instrumentation &mdash; anything that needs knowledge of your business domain.
 
 Go kit provides endpoint and transport domain middlewares,
  for functionality like rate limiting, circuit breaking, load balancing,
- and distributed tracing —
- all of which are generally agnostic to your business domain.
+ and distributed tracing &mdash; all of which are generally agnostic to your business domain.
 
 In short, Go kit tries to enforce strict **separation of concerns**
  through studious use of the **middleware** (or decorator) pattern.
 
-## Why is func main always so big?
+## Dependency Injection &mdash; Why is func main always so big?
 
 Go kit encourages you to design your services as multiple interacting components,
  including several single-purpose middlewares.
@@ -101,7 +161,7 @@ This keeps dependencies explicit, which stops a lot of technical debt before it 
 For more general Go design tips, see
  [Go best practices, six years in](https://peter.bourgon.org/go-best-practices-2016/).
 
-## How should I deploy Go kit services?
+## Deployment &mdash; How should I deploy Go kit services?
 
 It's totally up to you.
 You can build a static binary, scp it to your server,
@@ -114,7 +174,7 @@ Or you can package your service up into a container, ship it to a registry,
 Go kit is mostly concerned with good software engineering within your service;
  it tries to integrate well with any kind of platform or infrastructure.
 
-## How should I encode errors?
+## Errors &mdash; How should I encode errors?
 
 Your service methods will probably return errors.
 You have two options for encoding them in your endpoints.
@@ -131,9 +191,9 @@ So, it's likely that you want to encode errors in your response struct.
 [addsvc](http://github.com/go-kit/kit/tree/master/examples/addsvc)
  contains examples of both methods.
 
-# Specific components
+# More specific topics
 
-## Which transports are supported?
+## Transports &mdash; Which transports are supported?
 
 Go kit ships with support for HTTP,
  [gRPC](http://www.grpc.io),
@@ -143,7 +203,7 @@ It's straightforward to add support for new transports;
  just [file an issue](https://github.com/go-kit/kit/issues/new)
  if you need something that isn't already offered.
 
-## Which service discovery systems are supported?
+## Service Discovery &mdash; Which service discovery systems are supported?
 
 Go kit ships with support for
  [Consul](https://consul.io),
@@ -168,7 +228,7 @@ Or if you have reached a scale where internal load balancers become a bottleneck
 (This is the [client-side discovery](http://microservices.io/patterns/client-side-discovery.html) pattern.)
 In these situations, package sd will be useful.
 
-## Which monitoring systems are supported?
+## Observability &mdash; Which monitoring systems are supported?
 
 Go kit ships with support for modern monitoring systems like
  [Prometheus](https://prometheus.io) and [InfluxDB](https://influxdata.com/),
@@ -184,7 +244,7 @@ Go kit ships with support for modern monitoring systems like
 
 [Prometheus](https://prometheus.io).
 
-## Why is package log so different?
+## Logging &mdash; Why is package log so different?
 
 Experience has taught us that a good logging package should be based on a minimal interface
  and should enforce so-called structured logging.
@@ -210,7 +270,7 @@ For more on logging philosophy, see
  [Let's talk about logging](http://dave.cheney.net/2015/11/05/lets-talk-about-logging), and
  [Logging v. instrumentation](https://peter.bourgon.org/blog/2016/02/07/logging-v-instrumentation.html).
 
-## How should I aggregate my logs?
+## Logging &mdash; How should I aggregate my logs?
 
 Collecting, shipping, and aggregating logs is the responsibility of the platform, not individual services.
 So, just make sure you're writing logs to stdout/stderr, and let another component handle the rest.
