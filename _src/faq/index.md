@@ -87,12 +87,12 @@ r.Methods("POST").Path("/profiles/").Handler(httptransport.NewServer(
 ))
 ```
 
-### Endpoints &mdash; What are Go kit endpoints?
+## Endpoints &mdash; What are Go kit endpoints?
 
 An endpoint is like an action/handler on a controller; it's where safety and antifragile logic lives.
 If you implement two transports (HTTP and gRPC), you might have two methods of sending requests to the same endpoint.
 
-### Services &mdash; What is a Go kit service?
+## Services &mdash; What is a Go kit service?
 
 Services are where all of the business logic is implemented.
 A service usually glues together multiple endpoints.
@@ -104,7 +104,7 @@ Go kit services should strive to abide
 That is, the business logic should have no knowledge of endpoint- or especially transport-domain concepts:
  your service shouldn't know anything about HTTP headers, or gRPC error codes.
 
-### Middlewares &mdash; What are middlewares, in Go kit?
+## Middlewares &mdash; What are middlewares, in Go kit?
 
 Go kit tries to enforce a strict separation of concerns through use of the middleware (or decorator) pattern.
 Middlewares can wrap endpoints or services to add functionality such as:
