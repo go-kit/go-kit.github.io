@@ -211,7 +211,7 @@ Go kit ships with support for
  [ZooKeeper](https://zookeeper.apache.org/),
  and DNS SRV records.
 
-## Do I even need to use package sd?
+## Service Discovery &mdash; Do I even need to use package sd?
 
 It depends on your infrastructure.
 
@@ -240,7 +240,7 @@ Go kit ships with support for modern monitoring systems like
  Datadog via [DogStatsD](http://docs.datadoghq.com/guides/dogstatsd/)
  and [Circonus](http://www.circonus.com/).
 
-## Which monitoring system should I use?
+## Observability &mdash; Which monitoring system should I use?
 
 [Prometheus](https://prometheus.io).
 
