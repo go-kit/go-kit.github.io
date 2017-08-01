@@ -146,6 +146,9 @@ Experience has taught me that the most comprehensible, maintainable, and express
  of defining and wiring up the component graph in a microservice
  is through an explicit and declarative composition in a large func main.
 
+Inversion of control is a common feature of other frameworks,
+ implemented via Dependency Injection or Service Locator patterns.
+But in Go kit, you should wire up your entire component graph in your func main.
 This style reinforces two important virtues.
 By strictly keeping component lifecycles in main,
  you avoid leaning on global state as a shortcut,
@@ -155,6 +158,28 @@ And if components are scoped to main,
  is to pass them explicitly as parameters to constructors.
 This keeps dependencies explicit, which stops a lot of technical debt before it starts.
 
+As an example, let's say we have the following components:
+
+- Logger
+- TodoService, implementing the Service interface
+- LoggingMiddleware, implementing the Service interface, requiring Logger and concrete TodoService
+- Endpoints, requiring a Service interface
+- HTTP (transport), requiring Endpoints
+
+Your func main should be wired up as follows:
+
+```go
+logger := log.NewLogger(...)
+
+var service todo.Service    // interface
+service = todo.NewService() // concrete struct
+service = todo.NewLoggingMiddleware(logger)(service)
+
+endpoints := todo.NewEndpoints(service)
+transport := todo.NewHTTPTransport(endpoints)
+```
+
+At the cost of having a potentially large func main, composition is explicit and declarative.
 For more general Go design tips, see
  [Go best practices, six years in](https://peter.bourgon.org/go-best-practices-2016/).
 
@@ -293,3 +318,44 @@ h = httptransport.NewServer(...)
 h = newRecoveringMiddleware(h, ...)
 // use h normally
 ```
+
+## Persistence &mdash; How should I work with databases and data stores?
+
+Accessing databases is typically part of the core business logic.
+Therefore, it probably makes sense to include an e.g. *sql.DB pointer in the concrete implementation of your service.
+
+```go
+type MyService struct {
+	db     *sql.DB
+	value  string
+	logger log.Logger
+}
+
+func NewService(db *sql.DB, value string, logger log.Logger) *MyService {
+	return &MyService{
+		db:     db,
+		value:  value,
+		logger: logger,
+	}
+}
+```
+
+Even better: consider defining an interface to model your persistence operations.
+The interface will deal in business domain objects, and have an implementation that wraps the database handle.
+For example, consider a simple persistence layer for user profiles.
+
+```go
+type Store interface {
+	Insert(Profile) error
+	Select(id string) (Profile, error)
+	Delete(id string) error
+}
+
+type databaseStore struct{ db *sql.DB }
+
+func (s *databaseStore) Insert(p Profile) error            { /* ... */ }
+func (s *databaseStore) Select(id string) (Profile, error) { /* ... */ }
+func (s *databaseStore) Delete(id string) error            { /* ... */ }
+```
+
+In this case, you'd include a Store, rather than a *sql.DB, in your concrete implementation.
