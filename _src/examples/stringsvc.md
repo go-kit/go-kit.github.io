@@ -195,6 +195,32 @@ $ curl -XPOST -d'{"s":"hello, world"}' localhost:8080/count
 
 No service can be considered production-ready without thorough logging and instrumentation.
 
+## Seperation of concerns 
+
+Separating each layer of the call graph into individual files makes a go-kit project easier to read as you increase the number of service endpoints. Our first example [stringsvc1](https://github.com/go-kit/kit/blob/master/examples/stringsvc1) had all of these layers in a single main file. Before we had more complexity separate your code into the following files and leave all remaining code in main.go
+
+Place your **services** into a service.go file with the following functions and types.
+
+```
+type StringService
+func stringService
+var ErrEmpty
+```
+
+Place your **transports** into a transport.go file with the following functions and types. 
+
+```
+func makeUppercaseEndpoint
+func makeCountEndpoint
+func decodeUppercaseRequest
+func decodeCountRequest
+func encodeResponse
+type uppercaseRequest
+type uppercaseResponse
+type countRequest
+type countResponse
+```
+
 ## Transport logging
 
 Any component that needs to log should treat the logger like a dependency, same as a database connection.
@@ -224,7 +250,15 @@ func loggingMiddleware(logger log.Logger) Middleware {
 }
 ```
 
-And wire it into each of our handlers.
+Use the [go-kit log](https://gokit.io/faq/#logging-mdash-why-is-package-log-so-different) package and remove the standard libraries [log](https://golang.org/pkg/log/). You will need to remove `log.Fatal` from main.go 
+
+```go
+import (
+ "github.com/go-kit/kit/log" 
+)
+```
+
+And wire it into each of our handlers. 
 
 ```go
 logger := log.NewLogfmtLogger(os.Stderr)
