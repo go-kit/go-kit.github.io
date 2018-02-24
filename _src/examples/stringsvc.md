@@ -702,6 +702,6 @@ It's possible to use Go kit to create a client package to your service,
  to make consuming your service easier from other Go programs.
 Effectively, your client package will provide an implementation of your service interface,
  which invokes a remote service instance using a specific transport.
-See [package addsvc/client](https://github.com/go-kit/kit/blob/master/examples/addsvc/client)
+See [addsvc/cmd/addcli](https://github.com/go-kit/kit/blob/master/examples/addsvc/cmd/addcli)
  or [package profilesvc/client](https://github.com/go-kit/kit/blob/master/examples/profilesvc/client)
  for examples.
