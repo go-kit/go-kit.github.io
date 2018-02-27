@@ -44,7 +44,7 @@ div.content li {
 }
 
 div.content pre {
-    background-color: #e6e6e6;
+    /* background-color: #e6e6e6; */
     margin: 20px 40px 20px 20px;
     line-height: 1.3em;
     padding: 10px;

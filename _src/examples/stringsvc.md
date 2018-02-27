@@ -381,17 +381,16 @@ We can use the same middleware pattern that we used for logging.
 ```go
 type instrumentingMiddleware struct {
 	requestCount   metrics.Counter
-	requestLatency metrics.TimeHistogram
+	requestLatency metrics.Histogram
 	countResult    metrics.Histogram
 	next           StringService
 }
 
 func (mw instrumentingMiddleware) Uppercase(ctx context.Context, s string) (output string, err error) {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "uppercase"}
-		errorField := metrics.Field{Key: "error", Value: fmt.Sprintf("%v", err)}
-		mw.requestCount.With(methodField).With(errorField).Add(1)
-		mw.requestLatency.With(methodField).With(errorField).Observe(time.Since(begin))
+		lvs := []string{"method", "uppercase", "error", fmt.Sprint(err != nil)}
+		mw.requestCount.With(lvs...).Add(1)
+		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
 	output, err = mw.next.Uppercase(ctx, s)
@@ -400,11 +399,10 @@ func (mw instrumentingMiddleware) Uppercase(ctx context.Context, s string) (outp
 
 func (mw instrumentingMiddleware) Count(ctx context.Context, s string) (n int) {
 	defer func(begin time.Time) {
-		methodField := metrics.Field{Key: "method", Value: "count"}
-		errorField := metrics.Field{Key: "error", Value: fmt.Sprintf("%v", error(nil))}
-		mw.requestCount.With(methodField).With(errorField).Add(1)
-		mw.requestLatency.With(methodField).With(errorField).Observe(time.Since(begin))
-		mw.countResult.Observe(int64(n))
+		lvs := []string{"method", "count", "error", "false"}
+		mw.requestCount.With(lvs...).Add(1)
+		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
+		mw.countResult.Observe(float64(n))
 	}(time.Now())
 
 	n = mw.next.Count(ctx, s)
@@ -425,24 +423,47 @@ func main() {
 	logger := log.NewLogfmtLogger(os.Stderr)
 
 	fieldKeys := []string{"method", "error"}
-	requestCount := kitprometheus.NewCounter(stdprometheus.CounterOpts{
-		// ...
+	requestCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Namespace: "my_group",
+		Subsystem: "string_service",
+		Name:      "request_count",
+		Help:      "Number of requests received.",
 	}, fieldKeys)
-	requestLatency := metrics.NewTimeHistogram(time.Microsecond, kitprometheus.NewSummary(stdprometheus.SummaryOpts{
-		// ...
-	}, fieldKeys))
-	countResult := kitprometheus.NewSummary(stdprometheus.SummaryOpts{
-		// ...
-	}, []string{}))
+	requestLatency := kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
+		Namespace: "my_group",
+		Subsystem: "string_service",
+		Name:      "request_latency_microseconds",
+		Help:      "Total duration of requests in microseconds.",
+	}, fieldKeys)
+	countResult := kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
+		Namespace: "my_group",
+		Subsystem: "string_service",
+		Name:      "count_result",
+		Help:      "The result of each count method.",
+	}, []string{}) // no fields here
 
 	var svc StringService
 	svc = stringService{}
 	svc = loggingMiddleware{logger, svc}
 	svc = instrumentingMiddleware{requestCount, requestLatency, countResult, svc}
 
-	// ...
+	uppercaseHandler := httptransport.NewServer(
+		makeUppercaseEndpoint(svc),
+		decodeUppercaseRequest,
+		encodeResponse,
+	)
 
-	http.Handle("/metrics", stdprometheus.Handler())
+	countHandler := httptransport.NewServer(
+		makeCountEndpoint(svc),
+		decodeCountRequest,
+		encodeResponse,
+	)
+
+	http.Handle("/uppercase", uppercaseHandler)
+	http.Handle("/count", countHandler)
+	http.Handle("/metrics", promhttp.Handler())
+	logger.Log("msg", "HTTP", "addr", ":8080")
+	logger.Log("err", http.ListenAndServe(":8080", nil))
 }
 ```
 
