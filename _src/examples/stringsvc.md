@@ -195,9 +195,9 @@ $ curl -XPOST -d'{"s":"hello, world"}' localhost:8080/count
 
 No service can be considered production-ready without thorough logging and instrumentation.
 
-## Seperation of concerns 
+## Separation of concerns 
 
-Separating each layer of the call graph into individual files makes a go-kit project easier to read as you increase the number of service endpoints. Our first example [stringsvc1](https://github.com/go-kit/kit/blob/master/examples/stringsvc1) had all of these layers in a single main file. Before we had more complexity separate your code into the following files and leave all remaining code in main.go
+Separating each layer of the call graph into individual files makes a go-kit project easier to read as you increase the number of service endpoints. Our first example [stringsvc1](https://github.com/go-kit/kit/blob/master/examples/stringsvc1) had all of these layers in a single main file. Before we add more complexity, let's separate our code into the following files and leave all remaining code in main.go
 
 Place your **services** into a service.go file with the following functions and types.
 
