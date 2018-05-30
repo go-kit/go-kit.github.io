@@ -203,7 +203,7 @@ Place your **services** into a service.go file with the following functions and 
 
 ```
 type StringService
-func stringService
+type stringService
 var ErrEmpty
 ```
 
@@ -273,13 +273,13 @@ var count endpoint.Endpoint
 count = makeCountEndpoint(svc)
 count = loggingMiddleware(log.With(logger, "method", "count"))(count)
 
-uppercaseHandler := httptransport.Server(
+uppercaseHandler := httptransport.NewServer(
 	// ...
 	uppercase,
 	// ...
 )
 
-countHandler := httptransport.Server(
+countHandler := httptransport.NewServer(
 	// ...
 	count,
 	// ...
@@ -346,7 +346,7 @@ func main() {
 	logger := log.NewLogfmtLogger(os.Stderr)
 
 	var svc StringService
-	svc = stringsvc{}
+	svc = stringService{}
 	svc = loggingMiddleware{logger, svc}
 
 	// ...
