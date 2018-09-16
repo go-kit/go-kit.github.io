@@ -6,7 +6,7 @@
 ---
 # First principles
 
-Let's create a minimal Go kit service.
+Let's create a minimal Go kit service. For now, we will use a single `main.go` file for that.
 
 ## Your business logic
 
@@ -18,8 +18,8 @@ In Go kit, we model a service as an **interface**.
 import "context"
 
 type StringService interface {
-	Uppercase(context.Context, string) (string, error)
-	Count(context.Context, string) int
+	Uppercase(string) (string, error)
+	Count(string) int
 }
 ```
 
@@ -34,14 +34,14 @@ import (
 
 type stringService struct{}
 
-func (stringService) Uppercase(_ context.Context, s string) (string, error) {
+func (stringService) Uppercase(s string) (string, error) {
 	if s == "" {
 		return "", ErrEmpty
 	}
 	return strings.ToUpper(s), nil
 }
 
-func (stringService) Count(_ context.Context, s string) int {
+func (stringService) Count(s string) int {
 	return len(s)
 }
 
@@ -79,11 +79,13 @@ type countResponse struct {
 
 Go kit provides much of its functionality through an abstraction called an **endpoint**.
 
+An endpoint is defined as follows (you don't have to put it anywhere in the code, it is provided by `go-kit`):
+
 ```go
 type Endpoint func(ctx context.Context, request interface{}) (response interface{}, err error)
 ```
 
-An endpoint represents a single RPC.
+It represents a single RPC.
 That is, a single method in our service interface.
 We'll write simple adapters to convert each of our service's methods into an endpoint.
 Each adapter takes a StringService, and returns an endpoint that corresponds to one of the methods.
@@ -95,9 +97,9 @@ import (
 )
 
 func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(_ context.Context, request interface{}) (interface{}, error) {
 		req := request.(uppercaseRequest)
-		v, err := svc.Uppercase(ctx, req.S)
+		v, err := svc.Uppercase(req.S)
 		if err != nil {
 			return uppercaseResponse{v, err.Error()}, nil
 		}
@@ -106,9 +108,9 @@ func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
 }
 
 func makeCountEndpoint(svc StringService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(_ context.Context, request interface{}) (interface{}, error) {
 		req := request.(countRequest)
-		v := svc.Count(ctx, req.S)
+		v := svc.Count(req.S)
 		return countResponse{v}, nil
 	}
 }
@@ -195,9 +197,11 @@ $ curl -XPOST -d'{"s":"hello, world"}' localhost:8080/count
 
 No service can be considered production-ready without thorough logging and instrumentation.
 
-## Separation of concerns 
+## Separation of concerns
 
-Separating each layer of the call graph into individual files makes a go-kit project easier to read as you increase the number of service endpoints. Our first example [stringsvc1](https://github.com/go-kit/kit/blob/master/examples/stringsvc1) had all of these layers in a single main file. Before we add more complexity, let's separate our code into the following files and leave all remaining code in main.go
+Separating each layer of the call graph into individual files makes a go-kit project easier to read as you increase the number of service endpoints.
+Our first example [stringsvc1](https://github.com/go-kit/kit/blob/master/examples/stringsvc1) had all of these layers in a single main file.
+Before we add more complexity, let's separate our code into the following files and leave all remaining code in main.go
 
 Place your **services** into a service.go file with the following functions and types.
 
@@ -207,7 +211,7 @@ type stringService
 var ErrEmpty
 ```
 
-Place your **transports** into a transport.go file with the following functions and types. 
+Place your **transports** into a `transport.go` file with the following functions and types.
 
 ```
 func makeUppercaseEndpoint
@@ -235,30 +239,33 @@ A middleware is a function that takes an endpoint and returns an endpoint.
 type Middleware func(Endpoint) Endpoint
 ```
 
+> Note, that the Middleware type is provided for you by go-kit.
+
 In between, it can do anything.
-Let's create a basic logging middleware.
+Below you can see how a basic logging middleware could be implemented (you don't need to copy/paste this code anywhere):
 
 ```go
 func loggingMiddleware(logger log.Logger) Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (interface{}, error) {
+		return func(_ context.Context, request interface{}) (interface{}, error) {
 			logger.Log("msg", "calling endpoint")
 			defer logger.Log("msg", "called endpoint")
-			return next(ctx, request)
+			return next(request)
 		}
 	}
 }
 ```
 
-Use the [go-kit log](https://gokit.io/faq/#logging-mdash-why-is-package-log-so-different) package and remove the standard libraries [log](https://golang.org/pkg/log/). You will need to remove `log.Fatal` from main.go 
+Use the [go-kit log](https://gokit.io/faq/#logging-mdash-why-is-package-log-so-different) package and remove the standard libraries [log](https://golang.org/pkg/log/).
+You will need to remove `log.Fatal` from the bottom of the `main.go` file.
 
 ```go
 import (
- "github.com/go-kit/kit/log" 
+ "github.com/go-kit/kit/log"
 )
 ```
 
-And wire it into each of our handlers. 
+And wire it into each of our handlers.
 
 ```go
 logger := log.NewLogfmtLogger(os.Stderr)
@@ -302,7 +309,7 @@ type loggingMiddleware struct {
 	next   StringService
 }
 
-func (mw loggingMiddleware) Uppercase(ctx context.Context, s string) (output string, err error) {
+func (mw loggingMiddleware) Uppercase(s string) (output string, err error) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"method", "uppercase",
@@ -313,11 +320,11 @@ func (mw loggingMiddleware) Uppercase(ctx context.Context, s string) (output str
 		)
 	}(time.Now())
 
-	output, err = mw.next.Uppercase(ctx, s)
+	output, err = mw.next.Uppercase(s)
 	return
 }
 
-func (mw loggingMiddleware) Count(ctx context.Context, s string) (n int) {
+func (mw loggingMiddleware) Count(s string) (n int) {
 	defer func(begin time.Time) {
 		mw.logger.Log(
 			"method", "count",
@@ -327,7 +334,7 @@ func (mw loggingMiddleware) Count(ctx context.Context, s string) (n int) {
 		)
 	}(time.Now())
 
-	n = mw.next.Count(ctx, s)
+	n = mw.next.Count(s)
 	return
 }
 ```
@@ -386,18 +393,18 @@ type instrumentingMiddleware struct {
 	next           StringService
 }
 
-func (mw instrumentingMiddleware) Uppercase(ctx context.Context, s string) (output string, err error) {
+func (mw instrumentingMiddleware) Uppercase(s string) (output string, err error) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "uppercase", "error", fmt.Sprint(err != nil)}
 		mw.requestCount.With(lvs...).Add(1)
 		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	output, err = mw.next.Uppercase(ctx, s)
+	output, err = mw.next.Uppercase(s)
 	return
 }
 
-func (mw instrumentingMiddleware) Count(ctx context.Context, s string) (n int) {
+func (mw instrumentingMiddleware) Count(s string) (n int) {
 	defer func(begin time.Time) {
 		lvs := []string{"method", "count", "error", "false"}
 		mw.requestCount.With(lvs...).Add(1)
@@ -405,7 +412,7 @@ func (mw instrumentingMiddleware) Count(ctx context.Context, s string) (n int) {
 		mw.countResult.Observe(float64(n))
 	}(time.Now())
 
-	n = mw.next.Count(ctx, s)
+	n = mw.next.Count(s)
 	return
 }
 ```
@@ -518,8 +525,8 @@ When used this way, we call it a _client_ endpoint.
 And to invoke the client endpoint, we just do some simple conversions.
 
 ```go
-func (mw proxymw) Uppercase(ctx context.Context, s string) (string, error) {
-	response, err := mw.uppercase(ctx, uppercaseRequest{S: s})
+func (mw proxymw) Uppercase(s string) (string, error) {
+	response, err := mw.uppercase(uppercaseRequest{S: s})
 	if err != nil {
 		return "", err
 	}
