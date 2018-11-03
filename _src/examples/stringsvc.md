@@ -266,6 +266,7 @@ import (
 ```
 
 And wire it into each of our handlers.
+Note that the next code section will *not* compile until you follow the **Application Logging** section, which defines loggingMiddleware.
 
 ```go
 logger := log.NewLogfmtLogger(os.Stderr)
