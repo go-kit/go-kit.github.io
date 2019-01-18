@@ -549,11 +549,11 @@ import (
 
 func proxyingMiddleware(proxyURL string) ServiceMiddleware {
 	return func(next StringService) StringService {
-		return proxymw{next, makeUppercaseEndpoint(proxyURL)}
+		return proxymw{next, makeUppercaseProxy(proxyURL)}
 	}
 }
 
-func makeUppercaseEndpoint(proxyURL string) endpoint.Endpoint {
+func makeUppercaseProxy(proxyURL string) endpoint.Endpoint {
 	return httptransport.NewClient(
 		"GET",
 		mustParseURL(proxyURL),
@@ -585,7 +585,7 @@ Internally, subscribers use a provided factory function to convert each discover
 type Factory func(instance string) (endpoint.Endpoint, error)
 ```
 
-So far, our factory function, makeUppercaseEndpoint, just calls the URL directly.
+So far, our factory function, makeUppercaseProxy, just calls the URL directly.
 But it's important to put some safety middleware, like circuit breakers and rate limiters, into your factory, too.
 
 ```go
@@ -593,7 +593,6 @@ var e endpoint.Endpoint
 e = makeUppercaseProxy(instance)
 e = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(e)
 e = kitratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(float64(maxQPS), int64(maxQPS)))(e)
-}
 ```
 
 Now that we've got a set of endpoints, we need to choose one.
