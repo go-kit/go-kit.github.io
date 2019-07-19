@@ -188,7 +188,7 @@ $ stringsvc1
 
 ```
 $ curl -XPOST -d'{"s":"hello, world"}' localhost:8080/uppercase
-{"v":"HELLO, WORLD","err":null}
+{"v":"HELLO, WORLD"}
 $ curl -XPOST -d'{"s":"hello, world"}' localhost:8080/count
 {"v":12}
 ```
@@ -487,7 +487,7 @@ msg=HTTP addr=:8080
 
 ```
 $ curl -XPOST -d'{"s":"hello, world"}' localhost:8080/uppercase
-{"v":"HELLO, WORLD","err":null}
+{"v":"HELLO, WORLD"}
 $ curl -XPOST -d'{"s":"hello, world"}' localhost:8080/count
 {"v":12}
 ```
@@ -683,9 +683,9 @@ listen=:8080 caller=main.go:72 msg=HTTP addr=:8080
 
 ```
 $ for s in foo bar baz ; do curl -d"{\"s\":\"$s\"}" localhost:8080/uppercase ; done
-{"v":"FOO","err":null}
-{"v":"BAR","err":null}
-{"v":"BAZ","err":null}
+{"v":"FOO"}
+{"v":"BAR"}
+{"v":"BAZ"}
 ```
 
 ```
