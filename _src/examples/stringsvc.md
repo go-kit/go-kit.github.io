@@ -685,7 +685,7 @@ listen=:8080 caller=main.go:72 msg=HTTP addr=:8080
 $ for s in foo bar baz ; do curl -d"{\"s\":\"$s\"}" localhost:8080/uppercase ; done
 {"v":"FOO"}
 {"v":"BAR"}
-{"v":"BAZ","err":null}
+{"v":"BAZ"}
 ```
 
 ```
