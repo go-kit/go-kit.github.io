@@ -247,10 +247,10 @@ Below you can see how a basic logging middleware could be implemented (you don't
 ```go
 func loggingMiddleware(logger log.Logger) Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(_ context.Context, request interface{}) (interface{}, error) {
+		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			logger.Log("msg", "calling endpoint")
 			defer logger.Log("msg", "called endpoint")
-			return next(request)
+			return next(ctx, request)
 		}
 	}
 }
