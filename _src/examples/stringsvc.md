@@ -208,6 +208,8 @@ Place your **services** into a service.go file with the following functions and 
 ```
 type StringService
 type stringService
+func Uppercase
+func Count
 var ErrEmpty
 ```
 
