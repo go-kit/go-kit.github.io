@@ -142,7 +142,7 @@ In short, Go kit tries to enforce strict **separation of concerns**
 
 Go kit encourages you to design your services as multiple interacting components,
  including several single-purpose middlewares.
-Experience has taught me that the most comprehensible, maintainable, and expressive method
+Experience has taught us that the most comprehensible, maintainable, and expressive method
  of defining and wiring up the component graph in a microservice
  is through an explicit and declarative composition in a large func main.
 
