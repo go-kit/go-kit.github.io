@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Go kit - The stringsvc tutorial</title>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<meta name="description" content="Go kit - The stringsvc tutorial" />
+<meta name="author" content="Peter Bourgon" />
+<meta name="keywords" content="go kit go-kit gokit golang microservice microservices toolkit framework metallica" />
+<link href="/css/global.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="c">
+<div class="hero">
+<div class="logo">
+<a href="/"><img src="/gokit-logo-header.png" width=100 height=100 alt="Go kit logo" /></a>
+</div>
+
+<div class="title">
+<h1>Go kit</h1>
+<h2>The stringsvc tutorial</h2>
+</div>
+</div>
+
+<hr/>
+<div class="header">
+<p>
+	<a href="/">Home</a> &nbsp;&nbsp;
+	<a href="/examples/">Examples</a> &nbsp;&nbsp;
+	<a href="/faq/">FAQ</a> &nbsp;&nbsp;
+	<a href="/blog/">Blog</a> &nbsp;&nbsp;·&nbsp;&nbsp;
+	<a href="https://github.com/go-kit/kit"><strong>GitHub</strong></a> &nbsp;&nbsp;
+	<a href="https://godoc.org/github.com/go-kit/kit">GoDoc</a> &nbsp;&nbsp;
+	<a href="https://gophers.slack.com/messages/go-kit/">Slack</a> &nbsp;&nbsp;
+	<a href="https://groups.google.com/forum/#!forum/go-kit">Mailing list</a>
+</p>
+</div>
+
+<hr/>
+
+<div class="content">
+<nav>
+<ul>
+<li><a href="#first-principles">First principles</a>
+<ul>
+<li><a href="#your-business-logic">Your business logic</a></li>
+<li><a href="#requests-and-responses">Requests and responses</a></li>
+<li><a href="#endpoints">Endpoints</a></li>
+<li><a href="#transports">Transports</a></li>
+<li><a href="#stringsvc1">stringsvc1</a></li>
+</ul></li>
+<li><a href="#middlewares">Middlewares</a>
+<ul>
+<li><a href="#separation-of-concerns">Separation of concerns</a></li>
+<li><a href="#transport-logging">Transport logging</a></li>
+<li><a href="#application-logging">Application logging</a></li>
+<li><a href="#application-instrumentation">Application instrumentation</a></li>
+<li><a href="#stringsvc2">stringsvc2</a></li>
+</ul></li>
+<li><a href="#calling-other-services">Calling other services</a>
+<ul>
+<li><a href="#client-side-endpoints">Client-side endpoints</a></li>
+<li><a href="#service-discovery-and-load-balancing">Service discovery and load balancing</a></li>
+<li><a href="#stringsvc3">stringsvc3</a></li>
+</ul></li>
+<li><a href="#advanced-topics">Advanced topics</a>
+<ul>
+<li><a href="#threading-a-context">Threading a context</a></li>
+<li><a href="#distributed-tracing">Distributed tracing</a></li>
+<li><a href="#creating-a-client-package">Creating a client package</a></li>
+</ul></li>
+</ul>
+</nav>
+
+<h1 id="first-principles">First principles</h1>
+
+<p>Let&rsquo;s create a minimal Go kit service. For now, we will use a single <code>main.go</code> file for that.</p>
+
+<h2 id="your-business-logic">Your business logic</h2>
+
+<p>Your service starts with your business logic.
+In Go kit, we model a service as an <strong>interface</strong>.</p>
+
+<pre><code class="language-go">// StringService provides operations on strings.
+import &quot;context&quot;
+
+type StringService interface {
+	Uppercase(string) (string, error)
+	Count(string) int
+}
+</code></pre>
+
+<p>That interface will have an implementation.</p>
+
+<pre><code class="language-go">import (
+	&quot;context&quot;
+	&quot;errors&quot;
+	&quot;strings&quot;
+)
+
+type stringService struct{}
+
+func (stringService) Uppercase(s string) (string, error) {
+	if s == &quot;&quot; {
+		return &quot;&quot;, ErrEmpty
+	}
+	return strings.ToUpper(s), nil
+}
+
+func (stringService) Count(s string) int {
+	return len(s)
+}
+
+// ErrEmpty is returned when input string is empty
+var ErrEmpty = errors.New(&quot;Empty string&quot;)
+</code></pre>
+
+<h2 id="requests-and-responses">Requests and responses</h2>
+
+<p>In Go kit, the primary messaging pattern is RPC.
+So, every method in our interface will be modeled as a remote procedure call.
+For each method, we define <strong>request and response</strong> structs,
+ capturing all of the input and output parameters respectively.</p>
+
+<pre><code class="language-go">type uppercaseRequest struct {
+	S string `json:&quot;s&quot;`
+}
+
+type uppercaseResponse struct {
+	V   string `json:&quot;v&quot;`
+	Err string `json:&quot;err,omitempty&quot;` // errors don't JSON-marshal, so we use a string
+}
+
+type countRequest struct {
+	S string `json:&quot;s&quot;`
+}
+
+type countResponse struct {
+	V int `json:&quot;v&quot;`
+}
+</code></pre>
+
+<h2 id="endpoints">Endpoints</h2>
+
+<p>Go kit provides much of its functionality through an abstraction called an <strong>endpoint</strong>.</p>
+
+<p>An endpoint is defined as follows (you don&rsquo;t have to put it anywhere in the code, it is provided by <code>go-kit</code>):</p>
+
+<pre><code class="language-go">type Endpoint func(ctx context.Context, request interface{}) (response interface{}, err error)
+</code></pre>
+
+<p>It represents a single RPC.
+That is, a single method in our service interface.
+We&rsquo;ll write simple adapters to convert each of our service&rsquo;s methods into an endpoint.
+Each adapter takes a StringService, and returns an endpoint that corresponds to one of the methods.</p>
+
+<pre><code class="language-go">import (
+	&quot;context&quot;
+	&quot;github.com/go-kit/kit/endpoint&quot;
+)
+
+func makeUppercaseEndpoint(svc StringService) endpoint.Endpoint {
+	return func(_ context.Context, request interface{}) (interface{}, error) {
+		req := request.(uppercaseRequest)
+		v, err := svc.Uppercase(req.S)
+		if err != nil {
+			return uppercaseResponse{v, err.Error()}, nil
+		}
+		return uppercaseResponse{v, &quot;&quot;}, nil
+	}
+}
+
+func makeCountEndpoint(svc StringService) endpoint.Endpoint {
+	return func(_ context.Context, request interface{}) (interface{}, error) {
+		req := request.(countRequest)
+		v := svc.Count(req.S)
+		return countResponse{v}, nil
+	}
+}
+</code></pre>
+
+<h2 id="transports">Transports</h2>
+
+<p>Now we need to expose your service to the outside world, so it can be called.
+Your organization probably already has opinions about how services should talk to each other.
+Maybe you use Thrift, or custom JSON over HTTP.
+Go kit supports many <strong>transports</strong> out of the box.</p>
+
+<p>For this minimal example service, let&rsquo;s use JSON over HTTP.
+Go kit provides a helper struct, in package transport/http.</p>
+
+<pre><code class="language-go">import (
+	&quot;context&quot;
+	&quot;encoding/json&quot;
+	&quot;log&quot;
+	&quot;net/http&quot;
+
+	httptransport &quot;github.com/go-kit/kit/transport/http&quot;
+)
+
+func main() {
+	svc := stringService{}
+
+	uppercaseHandler := httptransport.NewServer(
+		makeUppercaseEndpoint(svc),
+		decodeUppercaseRequest,
+		encodeResponse,
+	)
+
+	countHandler := httptransport.NewServer(
+		makeCountEndpoint(svc),
+		decodeCountRequest,
+		encodeResponse,
+	)
+
+	http.Handle(&quot;/uppercase&quot;, uppercaseHandler)
+	http.Handle(&quot;/count&quot;, countHandler)
+	log.Fatal(http.ListenAndServe(&quot;:8080&quot;, nil))
+}
+
+func decodeUppercaseRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var request uppercaseRequest
+	if err := json.NewDecoder(r.Body).Decode(&amp;request); err != nil {
+		return nil, err
+	}
+	return request, nil
+}
+
+func decodeCountRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var request countRequest
+	if err := json.NewDecoder(r.Body).Decode(&amp;request); err != nil {
+		return nil, err
+	}
+	return request, nil
+}
+
+func encodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	return json.NewEncoder(w).Encode(response)
+}
+</code></pre>
+
+<h2 id="stringsvc1">stringsvc1</h2>
+
+<p>The complete service so far is <a href="https://github.com/go-kit/kit/blob/master/examples/stringsvc1">stringsvc1</a>.</p>
+
+<pre><code>$ go get github.com/go-kit/kit/examples/stringsvc1
+$ stringsvc1
+</code></pre>
+
+<pre><code>$ curl -XPOST -d'{&quot;s&quot;:&quot;hello, world&quot;}' localhost:8080/uppercase
+{&quot;v&quot;:&quot;HELLO, WORLD&quot;}
+$ curl -XPOST -d'{&quot;s&quot;:&quot;hello, world&quot;}' localhost:8080/count
+{&quot;v&quot;:12}
+</code></pre>
+
+<h1 id="middlewares">Middlewares</h1>
+
+<p>No service can be considered production-ready without thorough logging and instrumentation.</p>
+
+<h2 id="separation-of-concerns">Separation of concerns</h2>
+
+<p>Separating each layer of the call graph into individual files makes a go-kit project easier to read as you increase the number of service endpoints.
+Our first example <a href="https://github.com/go-kit/kit/blob/master/examples/stringsvc1">stringsvc1</a> had all of these layers in a single main file.
+Before we add more complexity, let&rsquo;s separate our code into the following files and leave all remaining code in main.go</p>
+
+<p>Place your <strong>services</strong> into a service.go file with the following functions and types.</p>
+
+<pre><code>type StringService
+type stringService
+func Uppercase
+func Count
+var ErrEmpty
+</code></pre>
+
+<p>Place your <strong>transports</strong> into a <code>transport.go</code> file with the following functions and types.</p>
+
+<pre><code>func makeUppercaseEndpoint
+func makeCountEndpoint
+func decodeUppercaseRequest
+func decodeCountRequest
+func encodeResponse
+type uppercaseRequest
+type uppercaseResponse
+type countRequest
+type countResponse
+</code></pre>
+
+<h2 id="transport-logging">Transport logging</h2>
+
+<p>Any component that needs to log should treat the logger like a dependency, same as a database connection.
+So, we construct our logger in our <code>func main</code>, and pass it to components that need it.
+We never use a globally-scoped logger.</p>
+
+<p>We could pass a logger directly into our stringService implementation, but there&rsquo;s a better way.
+Let&rsquo;s use a <strong>middleware</strong>, also known as a decorator.
+A middleware is a function that takes an endpoint and returns an endpoint.</p>
+
+<pre><code class="language-go">type Middleware func(Endpoint) Endpoint
+</code></pre>
+
+<blockquote>
+<p>Note, that the Middleware type is provided for you by go-kit.</p>
+</blockquote>
+
+<p>In between, it can do anything.
+Below you can see how a basic logging middleware could be implemented (you don&rsquo;t need to copy/paste this code anywhere):</p>
+
+<pre><code class="language-go">func loggingMiddleware(logger log.Logger) Middleware {
+	return func(next endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (interface{}, error) {
+			logger.Log(&quot;msg&quot;, &quot;calling endpoint&quot;)
+			defer logger.Log(&quot;msg&quot;, &quot;called endpoint&quot;)
+			return next(ctx, request)
+		}
+	}
+}
+</code></pre>
+
+<p>Use the <a href="https://gokit.io/faq/#logging-mdash-why-is-package-log-so-different">go-kit log</a> package and remove the standard libraries <a href="https://golang.org/pkg/log/">log</a>.
+You will need to remove <code>log.Fatal</code> from the bottom of the <code>main.go</code> file.</p>
+
+<pre><code class="language-go">import (
+ &quot;github.com/go-kit/kit/log&quot;
+)
+</code></pre>
+
+<p>And wire it into each of our handlers.
+Note that the next code section will <em>not</em> compile until you follow the <strong>Application Logging</strong> section, which defines loggingMiddleware.</p>
+
+<pre><code class="language-go">logger := log.NewLogfmtLogger(os.Stderr)
+
+svc := stringService{}
+
+var uppercase endpoint.Endpoint
+uppercase = makeUppercaseEndpoint(svc)
+uppercase = loggingMiddleware(log.With(logger, &quot;method&quot;, &quot;uppercase&quot;))(uppercase)
+
+var count endpoint.Endpoint
+count = makeCountEndpoint(svc)
+count = loggingMiddleware(log.With(logger, &quot;method&quot;, &quot;count&quot;))(count)
+
+uppercaseHandler := httptransport.NewServer(
+	uppercase,
+	// ...
+)
+
+countHandler := httptransport.NewServer(
+	count,
+	// ...
+)
+</code></pre>
+
+<p>It turns out that this technique is useful for a lot more than just logging.
+Many Go kit components are implemented as endpoint middlewares.</p>
+
+<h2 id="application-logging">Application logging</h2>
+
+<p>But what if we want to log in our application domain, like the parameters that are passed in?
+It turns out that we can define a middleware for our service, and get the same nice and composable effects.
+Since our StringService is defined as an interface, we just need to make a new type
+ which wraps an existing StringService, and performs the extra logging duties.</p>
+
+<pre><code class="language-go">type loggingMiddleware struct {
+	logger log.Logger
+	next   StringService
+}
+
+func (mw loggingMiddleware) Uppercase(s string) (output string, err error) {
+	defer func(begin time.Time) {
+		mw.logger.Log(
+			&quot;method&quot;, &quot;uppercase&quot;,
+			&quot;input&quot;, s,
+			&quot;output&quot;, output,
+			&quot;err&quot;, err,
+			&quot;took&quot;, time.Since(begin),
+		)
+	}(time.Now())
+
+	output, err = mw.next.Uppercase(s)
+	return
+}
+
+func (mw loggingMiddleware) Count(s string) (n int) {
+	defer func(begin time.Time) {
+		mw.logger.Log(
+			&quot;method&quot;, &quot;count&quot;,
+			&quot;input&quot;, s,
+			&quot;n&quot;, n,
+			&quot;took&quot;, time.Since(begin),
+		)
+	}(time.Now())
+
+	n = mw.next.Count(s)
+	return
+}
+</code></pre>
+
+<p>And wire it in.</p>
+
+<pre><code class="language-go">import (
+	&quot;os&quot;
+
+	&quot;github.com/go-kit/kit/log&quot;
+	httptransport &quot;github.com/go-kit/kit/transport/http&quot;
+)
+
+func main() {
+	logger := log.NewLogfmtLogger(os.Stderr)
+
+	var svc StringService
+	svc = stringService{}
+	svc = loggingMiddleware{logger, svc}
+
+	// ...
+
+	uppercaseHandler := httptransport.NewServer(
+		makeUppercaseEndpoint(svc),
+		// ...
+	)
+
+	countHandler := httptransport.NewServer(
+		makeCountEndpoint(svc),
+		// ...
+	)
+}
+</code></pre>
+
+<p>Use endpoint middlewares for transport-domain concerns, like circuit breaking and rate limiting.
+Use service middlewares for business-domain concerns, like logging and instrumentation.
+Speaking of instrumentation&hellip;</p>
+
+<h2 id="application-instrumentation">Application instrumentation</h2>
+
+<p>In Go kit, instrumentation means using <strong>package metrics</strong> to record statistics about your service&rsquo;s runtime behavior.
+Counting the number of jobs processed,
+ recording the duration of requests after they&rsquo;ve finished,
+ and tracking the number of in-flight operations would all be considered instrumentation.</p>
+
+<p>We can use the same middleware pattern that we used for logging.</p>
+
+<pre><code class="language-go">type instrumentingMiddleware struct {
+	requestCount   metrics.Counter
+	requestLatency metrics.Histogram
+	countResult    metrics.Histogram
+	next           StringService
+}
+
+func (mw instrumentingMiddleware) Uppercase(s string) (output string, err error) {
+	defer func(begin time.Time) {
+		lvs := []string{&quot;method&quot;, &quot;uppercase&quot;, &quot;error&quot;, fmt.Sprint(err != nil)}
+		mw.requestCount.With(lvs...).Add(1)
+		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	output, err = mw.next.Uppercase(s)
+	return
+}
+
+func (mw instrumentingMiddleware) Count(s string) (n int) {
+	defer func(begin time.Time) {
+		lvs := []string{&quot;method&quot;, &quot;count&quot;, &quot;error&quot;, &quot;false&quot;}
+		mw.requestCount.With(lvs...).Add(1)
+		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
+		mw.countResult.Observe(float64(n))
+	}(time.Now())
+
+	n = mw.next.Count(s)
+	return
+}
+</code></pre>
+
+<p>And wire it into our service.</p>
+
+<pre><code class="language-go">import (
+	stdprometheus &quot;github.com/prometheus/client_golang/prometheus&quot;
+	kitprometheus &quot;github.com/go-kit/kit/metrics/prometheus&quot;
+	&quot;github.com/go-kit/kit/metrics&quot;
+)
+
+func main() {
+	logger := log.NewLogfmtLogger(os.Stderr)
+
+	fieldKeys := []string{&quot;method&quot;, &quot;error&quot;}
+	requestCount := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Namespace: &quot;my_group&quot;,
+		Subsystem: &quot;string_service&quot;,
+		Name:      &quot;request_count&quot;,
+		Help:      &quot;Number of requests received.&quot;,
+	}, fieldKeys)
+	requestLatency := kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
+		Namespace: &quot;my_group&quot;,
+		Subsystem: &quot;string_service&quot;,
+		Name:      &quot;request_latency_microseconds&quot;,
+		Help:      &quot;Total duration of requests in microseconds.&quot;,
+	}, fieldKeys)
+	countResult := kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
+		Namespace: &quot;my_group&quot;,
+		Subsystem: &quot;string_service&quot;,
+		Name:      &quot;count_result&quot;,
+		Help:      &quot;The result of each count method.&quot;,
+	}, []string{}) // no fields here
+
+	var svc StringService
+	svc = stringService{}
+	svc = loggingMiddleware{logger, svc}
+	svc = instrumentingMiddleware{requestCount, requestLatency, countResult, svc}
+
+	uppercaseHandler := httptransport.NewServer(
+		makeUppercaseEndpoint(svc),
+		decodeUppercaseRequest,
+		encodeResponse,
+	)
+
+	countHandler := httptransport.NewServer(
+		makeCountEndpoint(svc),
+		decodeCountRequest,
+		encodeResponse,
+	)
+
+	http.Handle(&quot;/uppercase&quot;, uppercaseHandler)
+	http.Handle(&quot;/count&quot;, countHandler)
+	http.Handle(&quot;/metrics&quot;, promhttp.Handler())
+	logger.Log(&quot;msg&quot;, &quot;HTTP&quot;, &quot;addr&quot;, &quot;:8080&quot;)
+	logger.Log(&quot;err&quot;, http.ListenAndServe(&quot;:8080&quot;, nil))
+}
+</code></pre>
+
+<h2 id="stringsvc2">stringsvc2</h2>
+
+<p>The complete service so far is <a href="https://github.com/go-kit/kit/blob/master/examples/stringsvc2">stringsvc2</a>.</p>
+
+<pre><code>$ go get github.com/go-kit/kit/examples/stringsvc2
+$ stringsvc2
+msg=HTTP addr=:8080
+</code></pre>
+
+<pre><code>$ curl -XPOST -d'{&quot;s&quot;:&quot;hello, world&quot;}' localhost:8080/uppercase
+{&quot;v&quot;:&quot;HELLO, WORLD&quot;}
+$ curl -XPOST -d'{&quot;s&quot;:&quot;hello, world&quot;}' localhost:8080/count
+{&quot;v&quot;:12}
+</code></pre>
+
+<pre><code>method=uppercase input=&quot;hello, world&quot; output=&quot;HELLO, WORLD&quot; err=null took=2.455µs
+method=count input=&quot;hello, world&quot; n=12 took=743ns
+</code></pre>
+
+<h1 id="calling-other-services">Calling other services</h1>
+
+<p>It&rsquo;s rare that a service exists in a vacuum.
+Often, you need to call other services.
+<strong>This is where Go kit shines</strong>.
+We provide transport middlewares to solve many of the problems that come up.</p>
+
+<p>Let&rsquo;s say that we want to have our string service call out to a <em>different</em> string service
+ to satisfy the Uppercase method.
+In effect, proxying the request to another service.
+Let&rsquo;s implement the proxying middleware as a ServiceMiddleware, same as a logging or instrumenting middleware.</p>
+
+<pre><code class="language-go">// proxymw implements StringService, forwarding Uppercase requests to the
+// provided endpoint, and serving all other (i.e. Count) requests via the
+// next StringService.
+type proxymw struct {
+	next      StringService     // Serve most requests via this service...
+	uppercase endpoint.Endpoint // ...except Uppercase, which gets served by this endpoint
+}
+</code></pre>
+
+<h2 id="client-side-endpoints">Client-side endpoints</h2>
+
+<p>We&rsquo;ve got exactly the same endpoint we already know about, but we&rsquo;ll use it to invoke, rather than serve, a request.
+When used this way, we call it a <em>client</em> endpoint.
+And to invoke the client endpoint, we just do some simple conversions.</p>
+
+<pre><code class="language-go">func (mw proxymw) Uppercase(s string) (string, error) {
+	response, err := mw.uppercase(uppercaseRequest{S: s})
+	if err != nil {
+		return &quot;&quot;, err
+	}
+	resp := response.(uppercaseResponse)
+	if resp.Err != &quot;&quot; {
+		return resp.V, errors.New(resp.Err)
+	}
+	return resp.V, nil
+}
+</code></pre>
+
+<p>Now, to construct one of these proxying middlewares, we convert a proxy URL string to an endpoint.
+If we assume JSON over HTTP, we can use a helper in the transport/http package.</p>
+
+<pre><code class="language-go">import (
+	httptransport &quot;github.com/go-kit/kit/transport/http&quot;
+)
+
+func proxyingMiddleware(proxyURL string) ServiceMiddleware {
+	return func(next StringService) StringService {
+		return proxymw{next, makeUppercaseProxy(proxyURL)}
+	}
+}
+
+func makeUppercaseProxy(proxyURL string) endpoint.Endpoint {
+	return httptransport.NewClient(
+		&quot;GET&quot;,
+		mustParseURL(proxyURL),
+		encodeUppercaseRequest,
+		decodeUppercaseResponse,
+	).Endpoint()
+}
+</code></pre>
+
+<h2 id="service-discovery-and-load-balancing">Service discovery and load balancing</h2>
+
+<p>That&rsquo;s fine if we only have a single remote service.
+But in reality, we&rsquo;ll probably have many service instances available to us.
+We want to discover them through some service discovery mechanism, and spread our load across all of them.
+And if any of those instances start to behave badly, we want to deal with that, without affecting our own service&rsquo;s reliability.</p>
+
+<p>Go kit offers adapters to different service discovery systems, to get up-to-date sets of instances, exposed as individual endpoints.
+Those adapters are called subscribers.</p>
+
+<pre><code class="language-go">type Subscriber interface {
+	Endpoints() ([]endpoint.Endpoint, error)
+}
+</code></pre>
+
+<p>Internally, subscribers use a provided factory function to convert each discovered instance string (typically host:port) to a usable endpoint.</p>
+
+<pre><code class="language-go">type Factory func(instance string) (endpoint.Endpoint, error)
+</code></pre>
+
+<p>So far, our factory function, makeUppercaseProxy, just calls the URL directly.
+But it&rsquo;s important to put some safety middleware, like circuit breakers and rate limiters, into your factory, too.</p>
+
+<pre><code class="language-go">var e endpoint.Endpoint
+e = makeUppercaseProxy(instance)
+e = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(e)
+e = kitratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(float64(maxQPS), int64(maxQPS)))(e)
+</code></pre>
+
+<p>Now that we&rsquo;ve got a set of endpoints, we need to choose one.
+Load balancers wrap subscribers, and select one endpoint from many.
+Go kit provides a couple of basic load balancers, and it&rsquo;s easy to write your own if you want more advanced heuristics.</p>
+
+<pre><code class="language-go">type Balancer interface {
+	Endpoint() (endpoint.Endpoint, error)
+}
+</code></pre>
+
+<p>Now we have the ability to choose endpoints according to some heuristic.
+We can use that to provide a single, logical, robust endpoint to consumers.
+A retry strategy wraps a load balancer, and returns a usable endpoint.
+The retry strategy will retry failed requests until either the max attempts or timeout has been reached.</p>
+
+<pre><code class="language-go">func Retry(max int, timeout time.Duration, lb Balancer) endpoint.Endpoint
+</code></pre>
+
+<p>Let&rsquo;s wire up our final proxying middleware.
+For simplicity, we&rsquo;ll assume the user will specify multiple comma-separate instance endpoints with a flag.</p>
+
+<pre><code class="language-go">func proxyingMiddleware(instances string, logger log.Logger) ServiceMiddleware {
+	// If instances is empty, don't proxy.
+	if instances == &quot;&quot; {
+		logger.Log(&quot;proxy_to&quot;, &quot;none&quot;)
+		return func(next StringService) StringService { return next }
+	}
+
+	// Set some parameters for our client.
+	var (
+		qps         = 100                    // beyond which we will return an error
+		maxAttempts = 3                      // per request, before giving up
+		maxTime     = 250 * time.Millisecond // wallclock time, before giving up
+	)
+
+	// Otherwise, construct an endpoint for each instance in the list, and add
+	// it to a fixed set of endpoints. In a real service, rather than doing this
+	// by hand, you'd probably use package sd's support for your service
+	// discovery system.
+	var (
+		instanceList = split(instances)
+		subscriber   sd.FixedSubscriber
+	)
+	logger.Log(&quot;proxy_to&quot;, fmt.Sprint(instanceList))
+	for _, instance := range instanceList {
+		var e endpoint.Endpoint
+		e = makeUppercaseProxy(instance)
+		e = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(e)
+		e = kitratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(float64(qps), int64(qps)))(e)
+		subscriber = append(subscriber, e)
+	}
+
+	// Now, build a single, retrying, load-balancing endpoint out of all of
+	// those individual endpoints.
+	balancer := lb.NewRoundRobin(subscriber)
+	retry := lb.Retry(maxAttempts, maxTime, balancer)
+
+	// And finally, return the ServiceMiddleware, implemented by proxymw.
+	return func(next StringService) StringService {
+		return proxymw{next, retry}
+	}
+}
+</code></pre>
+
+<h2 id="stringsvc3">stringsvc3</h2>
+
+<p>The complete service so far is <a href="https://github.com/go-kit/kit/blob/master/examples/stringsvc3">stringsvc3</a>.</p>
+
+<pre><code>$ go get github.com/go-kit/kit/examples/stringsvc3
+$ stringsvc3 -listen=:8001 &amp;
+listen=:8001 caller=proxying.go:25 proxy_to=none
+listen=:8001 caller=main.go:72 msg=HTTP addr=:8001
+$ stringsvc3 -listen=:8002 &amp;
+listen=:8002 caller=proxying.go:25 proxy_to=none
+listen=:8002 caller=main.go:72 msg=HTTP addr=:8002
+$ stringsvc3 -listen=:8003 &amp;
+listen=:8003 caller=proxying.go:25 proxy_to=none
+listen=:8003 caller=main.go:72 msg=HTTP addr=:8003
+$ stringsvc3 -listen=:8080 -proxy=localhost:8001,localhost:8002,localhost:8003
+listen=:8080 caller=proxying.go:29 proxy_to=&quot;[localhost:8001 localhost:8002 localhost:8003]&quot;
+listen=:8080 caller=main.go:72 msg=HTTP addr=:8080
+</code></pre>
+
+<pre><code>$ for s in foo bar baz ; do curl -d&quot;{\&quot;s\&quot;:\&quot;$s\&quot;}&quot; localhost:8080/uppercase ; done
+{&quot;v&quot;:&quot;FOO&quot;}
+{&quot;v&quot;:&quot;BAR&quot;}
+{&quot;v&quot;:&quot;BAZ&quot;}
+</code></pre>
+
+<pre><code>listen=:8001 caller=logging.go:28 method=uppercase input=foo output=FOO err=null took=5.168µs
+listen=:8080 caller=logging.go:28 method=uppercase input=foo output=FOO err=null took=4.39012ms
+listen=:8002 caller=logging.go:28 method=uppercase input=bar output=BAR err=null took=5.445µs
+listen=:8080 caller=logging.go:28 method=uppercase input=bar output=BAR err=null took=2.04831ms
+listen=:8003 caller=logging.go:28 method=uppercase input=baz output=BAZ err=null took=3.285µs
+listen=:8080 caller=logging.go:28 method=uppercase input=baz output=BAZ err=null took=1.388155ms
+</code></pre>
+
+<h1 id="advanced-topics">Advanced topics</h1>
+
+<h2 id="threading-a-context">Threading a context</h2>
+
+<p>The context object is used to carry information across conceptual boundaries in the scope of a single request.
+In our example, we haven&rsquo;t yet threaded the context through our business logic.
+But that&rsquo;s almost always a good idea.
+It allows you to pass request-scoped information between business logic and middlewares,
+ and is necessary for more sophisticated tasks like granular distributed tracing annotations.</p>
+
+<p>Concretely, this means your business logic interfaces will look like</p>
+
+<pre><code class="language-go">type MyService interface {
+	Foo(context.Context, string, int) (string, error)
+	Bar(context.Context, string) error
+	Baz(context.Context) (int, error)
+}
+</code></pre>
+
+<h2 id="distributed-tracing">Distributed tracing</h2>
+
+<p>Once your infrastructure grows beyond a certain size,
+ it becomes important to trace requests through multiple services,
+ so you can identify and troubleshoot hotspots.
+See <a href="https://github.com/go-kit/kit/blob/master/tracing">package tracing</a> for more information.</p>
+
+<h2 id="creating-a-client-package">Creating a client package</h2>
+
+<p>It&rsquo;s possible to use Go kit to create a client package to your service,
+ to make consuming your service easier from other Go programs.
+Effectively, your client package will provide an implementation of your service interface,
+ which invokes a remote service instance using a specific transport.
+See <a href="https://github.com/go-kit/kit/blob/master/examples/addsvc/cmd/addcli">addsvc/cmd/addcli</a>
+ or <a href="https://github.com/go-kit/kit/blob/master/examples/profilesvc/client">package profilesvc/client</a>
+ for examples.</p>
+</div>
+
+<br/>
+<hr/>
+<div class="footer">
+<p>
+Copyright &copy; 2014&ndash;2017 <a href="https://peter.bourgon.org">Peter Bourgon</a>
+ and <a href="https://github.com/go-kit/kit/contributors">the Go kit contributors</a>. <br/>
+The Go Gopher was designed by <a href="http://reneefrench.blogspot.com">Renée French</a>
+ and is licensed under the Creative Commons 3.0 Attributions license.
+</p>
+</div>
+
+</div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-76889420-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+</body>
+</html>

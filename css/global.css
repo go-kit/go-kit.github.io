@@ -1,0 +1,64 @@
+body {
+    background-color: #fafafa;
+    color: #1a1a1a;
+    font-family: sans-serif;
+    line-height: 1.4em;
+}
+
+div#c {
+    width: 85%;
+    min-width: 750px;
+    margin: 15px auto;
+}
+
+div.hero { display: flex; }
+div.hero .logo { margin-right: 20px; }
+
+div.hero h2 {
+    margin-top: -5px;
+    margin-left: 5px;
+    font-weight: 200;
+}
+
+div.blockcontainer {
+    display: flex;
+    justify-content: space-between;
+}
+
+div.pitch .block { width: 31%; }
+div.compare .block { width: 48%; }
+div.why .block { width: 31%; }
+
+div.content {
+    min-width: 600px;
+    width: 75%;
+}
+
+div.content h1, div.content h2 {
+    margin-top: 20px;
+    padding-top: 20px;
+}
+
+div.content li {
+    margin-left: -15px;
+}
+
+div.content pre {
+    /* background-color: #e6e6e6; */
+    margin: 20px 40px 20px 20px;
+    line-height: 1.3em;
+    padding: 10px;
+    border-top: solid 1px #999;
+    border-bottom: solid 1px #999;
+}
+
+div.footer p {
+    color: #bababa;
+    font-size: 9pt;
+}
+div.footer p a {
+    color: #bababa;
+}
+div.footer p a:visited {
+    color: #bababa;
+}
