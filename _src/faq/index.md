@@ -299,7 +299,7 @@ So, just make sure you're writing logs to stdout/stderr, and let another compone
 
 ## Panics &mdash; How should my service handle panics?
 
-Panics indicate programmer error and signal corrputed program state.
+Panics indicate programmer error and signal corrupted program state.
 They shouldn't be treated as errors, or ersatz exceptions.
 In general, you shouldn't explicitly recover from panics:
  you should allow them to crash your program or handler goroutine,
