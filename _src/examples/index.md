@@ -12,22 +12,22 @@ Here you can find some examples that will orient you to Go kit idioms,
   writing a service from first principles. It can help you understand
   the decisions that went into Go kit's design.
 
-- **[addsvc](https://github.com/go-kit/kit/blob/master/examples/addsvc)**
+- **[addsvc](https://github.com/go-kit/examples/blob/master/addsvc)**
   is the original example service.
   It exposes a set of operations over all supported transports.
   It's fully logged, instrumented, and uses distributed tracing.
   It also demonstrates how to create and use client packages.
   It demonstrates almost all of Go kit's features.
 
-- **[profilesvc](https://github.com/go-kit/kit/blob/master/examples/profilesvc)**
+- **[profilesvc](https://github.com/go-kit/examples/blob/master/profilesvc)**
   demonstrates how to use Go kit
   to write a microservice with a REST-ish API.
   It uses net/http and the excellent Gorilla web toolkit.
 
-- **[shipping](https://github.com/go-kit/kit/blob/master/examples/shipping)**
+- **[shipping](https://github.com/go-kit/examples/blob/master/shipping)**
   is a complete, "real-world" application composed of multiple microservices,
   based on Domain Driven Design principles.
 
-- **[apigateway](https://github.com/go-kit/kit/blob/master/examples/apigateway)**
+- **[apigateway](https://github.com/go-kit/examples/blob/master/apigateway)**
   demonstrates how to implement the [API gateway pattern](http://microservices.io/patterns/apigateway.html)
   backed by a Consul service discovery system.
