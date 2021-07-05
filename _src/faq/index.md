@@ -210,7 +210,7 @@ It's unlikely that a business-domain error from your service
  should cause a circuit breaker to trip in a client.
 So, it's likely that you want to encode errors in your response struct.
 
-[addsvc](http://github.com/go-kit/kit/tree/master/examples/addsvc)
+[addsvc](http://github.com/go-kit/examples/tree/master/addsvc)
  contains examples of both methods.
 
 # More specific topics

@@ -179,7 +179,7 @@ func encodeResponse(_ context.Context, w http.ResponseWriter, response interface
 
 ## stringsvc1
 
-The complete service so far is [stringsvc1](https://github.com/go-kit/kit/blob/master/examples/stringsvc1).
+The complete service so far is [stringsvc1](https://github.com/go-kit/examples/blob/master/stringsvc1).
 
 ```
 $ go get github.com/go-kit/kit/examples/stringsvc1
@@ -200,7 +200,7 @@ No service can be considered production-ready without thorough logging and instr
 ## Separation of concerns
 
 Separating each layer of the call graph into individual files makes a go-kit project easier to read as you increase the number of service endpoints.
-Our first example [stringsvc1](https://github.com/go-kit/kit/blob/master/examples/stringsvc1) had all of these layers in a single main file.
+Our first example [stringsvc1](https://github.com/go-kit/examples/blob/master/stringsvc1) had all of these layers in a single main file.
 Before we add more complexity, let's separate our code into the following files and leave all remaining code in main.go
 
 Place your **services** into a service.go file with the following functions and types.
@@ -475,7 +475,7 @@ func main() {
 
 ## stringsvc2
 
-The complete service so far is [stringsvc2](https://github.com/go-kit/kit/blob/master/examples/stringsvc2).
+The complete service so far is [stringsvc2](https://github.com/go-kit/examples/blob/master/stringsvc2).
 
 ```
 $ go get github.com/go-kit/kit/examples/stringsvc2
@@ -661,7 +661,7 @@ func proxyingMiddleware(instances string, logger log.Logger) ServiceMiddleware {
 
 ## stringsvc3
 
-The complete service so far is [stringsvc3](https://github.com/go-kit/kit/blob/master/examples/stringsvc3).
+The complete service so far is [stringsvc3](https://github.com/go-kit/examples/blob/master/stringsvc3).
 
 ```
 $ go get github.com/go-kit/kit/examples/stringsvc3
@@ -728,6 +728,6 @@ It's possible to use Go kit to create a client package to your service,
  to make consuming your service easier from other Go programs.
 Effectively, your client package will provide an implementation of your service interface,
  which invokes a remote service instance using a specific transport.
-See [addsvc/cmd/addcli](https://github.com/go-kit/kit/blob/master/examples/addsvc/cmd/addcli)
- or [package profilesvc/client](https://github.com/go-kit/kit/blob/master/examples/profilesvc/client)
+See [addsvc/cmd/addcli](https://github.com/go-kit/examples/blob/master/addsvc/cmd/addcli)
+ or [package profilesvc/client](https://github.com/go-kit/examples/blob/master/profilesvc/client)
  for examples.
