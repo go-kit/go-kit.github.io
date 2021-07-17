@@ -1,7 +1,7 @@
-name: Render and publish
+name: Publish
 on: push
 jobs:
-  render:
+  Publish:
     runs-on: ubuntu-latest
     steps:
       - name: Check out
@@ -16,12 +16,8 @@ jobs:
         run: make
       - name: Show results
         run: tree output
-  publish:
-    runs-on: ubuntu-latest
-    needs: render
-    if: github.ref == 'refs/heads/source'
-    steps:
       - name: Deploy
+        if: github.ref == 'refs/heads/source'
         uses: JamesIves/github-pages-deploy-action@4.1.4
         with:
           branch: source
