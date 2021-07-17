@@ -284,7 +284,7 @@ It&rsquo;s unlikely that a business-domain error from your service
  should cause a circuit breaker to trip in a client.
 So, it&rsquo;s likely that you want to encode errors in your response struct.</p>
 
-<p><a href="http://github.com/go-kit/kit/tree/master/examples/addsvc">addsvc</a>
+<p><a href="http://github.com/go-kit/examples/tree/master/addsvc">addsvc</a>
  contains examples of both methods.</p>
 
 <h1 id="more-specific-topics">More specific topics</h1>
@@ -373,7 +373,7 @@ So, just make sure you&rsquo;re writing logs to stdout/stderr, and let another c
 
 <h2 id="panics-mdash-how-should-my-service-handle-panics">Panics &mdash; How should my service handle panics?</h2>
 
-<p>Panics indicate programmer error and signal corrputed program state.
+<p>Panics indicate programmer error and signal corrupted program state.
 They shouldn&rsquo;t be treated as errors, or ersatz exceptions.
 In general, you shouldn&rsquo;t explicitly recover from panics:
  you should allow them to crash your program or handler goroutine,
