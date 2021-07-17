@@ -14,8 +14,8 @@ jobs:
         run: go install github.com/peterbourgon/grender@v1.1.0
       - name: Render
         run: make
-      - name: Show output
-        run: tree tgt
+      - name: Show results
+        run: tree output
   publish:
     runs-on: ubuntu-latest
     needs: render
@@ -25,4 +25,4 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@4.1.4
         with:
           branch: master
-          folder: tgt
+          folder: output
