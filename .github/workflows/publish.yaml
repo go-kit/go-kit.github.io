@@ -20,5 +20,6 @@ jobs:
         if: github.ref == 'refs/heads/source'
         uses: JamesIves/github-pages-deploy-action@4.1.4
         with:
-          branch: source
+          branch: master
           folder: output
+          commit-message: Deploying site
