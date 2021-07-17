@@ -1,0 +1,12 @@
+<div class="header">
+<p>
+	<a href="/">Home</a> &nbsp;&nbsp;
+	<a href="/examples/">Examples</a> &nbsp;&nbsp;
+	<a href="/faq/">FAQ</a> &nbsp;&nbsp;
+	<a href="/blog/">Blog</a> &nbsp;&nbsp;·&nbsp;&nbsp;
+	<a href="https://github.com/go-kit/kit"><strong>GitHub</strong></a> &nbsp;&nbsp;
+	<a href="https://godoc.org/github.com/go-kit/kit">GoDoc</a> &nbsp;&nbsp;
+	<a href="https://gophers.slack.com/messages/go-kit/">Slack</a> &nbsp;&nbsp;
+	<a href="https://groups.google.com/forum/#!forum/go-kit">Mailing list</a>
+</p>
+</div>

@@ -1,0 +1,7 @@
+<br/>
+<hr/>
+{{ importhtml "footer.source" }}
+</div>
+{{ importhtml "ga.source" }}
+</body>
+</html>
