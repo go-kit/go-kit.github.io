@@ -263,7 +263,7 @@ You will need to remove `log.Fatal` from the bottom of the `main.go` file.
 
 ```go
 import (
- "github.com/go-kit/kit/log"
+ "github.com/go-kit/log"
 )
 ```
 
@@ -346,7 +346,7 @@ And wire it in.
 import (
 	"os"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 )
 
