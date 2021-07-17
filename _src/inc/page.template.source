@@ -1,7 +1,0 @@
-{{ importhtml "top.source" }}
-
-<div class="content">
-{{ .content -}}
-</div>
-
-{{ importhtml "bottom.source" }}
