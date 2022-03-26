@@ -319,7 +319,7 @@ Below you can see how a basic logging middleware could be implemented (you don&r
 You will need to remove <code>log.Fatal</code> from the bottom of the <code>main.go</code> file.</p>
 
 <pre><code class="language-go">import (
- &quot;github.com/go-kit/kit/log&quot;
+ &quot;github.com/go-kit/log&quot;
 )
 </code></pre>
 
@@ -399,7 +399,7 @@ func (mw loggingMiddleware) Count(s string) (n int) {
 <pre><code class="language-go">import (
 	&quot;os&quot;
 
-	&quot;github.com/go-kit/kit/log&quot;
+	&quot;github.com/go-kit/log&quot;
 	httptransport &quot;github.com/go-kit/kit/transport/http&quot;
 )
 
