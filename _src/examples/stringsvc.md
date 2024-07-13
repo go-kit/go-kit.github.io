@@ -182,7 +182,7 @@ func encodeResponse(_ context.Context, w http.ResponseWriter, response interface
 The complete service so far is [stringsvc1](https://github.com/go-kit/examples/tree/master/stringsvc1).
 
 ```
-$ go get github.com/go-kit/kit/examples/stringsvc1
+$ go install github.com/go-kit/examples/stringsvc1@latest
 $ stringsvc1
 ```
 
@@ -478,7 +478,7 @@ func main() {
 The complete service so far is [stringsvc2](https://github.com/go-kit/examples/tree/master/stringsvc2).
 
 ```
-$ go get github.com/go-kit/kit/examples/stringsvc2
+$ go install github.com/go-kit/examples/stringsvc2@latest
 $ stringsvc2
 msg=HTTP addr=:8080
 ```
@@ -664,7 +664,7 @@ func proxyingMiddleware(instances string, logger log.Logger) ServiceMiddleware {
 The complete service so far is [stringsvc3](https://github.com/go-kit/examples/tree/master/stringsvc3).
 
 ```
-$ go get github.com/go-kit/kit/examples/stringsvc3
+$ go install github.com/go-kit/examples/stringsvc3@latest
 $ stringsvc3 -listen=:8001 &
 listen=:8001 caller=proxying.go:25 proxy_to=none
 listen=:8001 caller=main.go:72 msg=HTTP addr=:8001
