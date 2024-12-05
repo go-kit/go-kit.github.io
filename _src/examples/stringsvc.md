@@ -525,7 +525,7 @@ And to invoke the client endpoint, we just do some simple conversions.
 
 ```go
 func (mw proxymw) Uppercase(s string) (string, error) {
-	response, err := mw.uppercase(uppercaseRequest{S: s})
+	response, err := mw.uppercase(context.Background(), uppercaseRequest{S: s})
 	if err != nil {
 		return "", err
 	}
